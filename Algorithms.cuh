@@ -69,15 +69,7 @@ int32_t* rna_idx;
 // DNAMutator
 struct GPUDnaMutator {
     int nb_swi_;
-    int nb_ins_;
-    int nb_del_;
     int nb_mut_;
-
-    int nb_large_dupl_;
-    int nb_large_del_;
-    int nb_rear_;
-
-    int cpt_rear_;
     int cpt_mut_;
 
 };
@@ -97,17 +89,13 @@ struct TypeMutation {
 };
 
 TypeMutation* tab_mutation;
-int* tab_diff_mutation;
 
 int* nb_mutations;
 int* mutations_idx;
 int* mutations_offset;
 
-int* nb_diff_mutations;
-int* diff_mutations_offset;
-
 int current_size_tab_mutation;
-int current_size_tab_diff_mutation;
+
 
 /**
  * Structure to transfer from host to device memory

@@ -186,6 +186,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef USE_CUDA
+    printf("Activate CUDA\n");
     exp_manager->run_evolution_on_gpu(nbstep);
 #else
     exp_manager->run_evolution(nbstep);

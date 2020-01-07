@@ -123,26 +123,12 @@ void transfer_in(ExpManager* exp_m, bool first_gen) {
                        exp_m->nb_indivs_ * sizeof(int)));
   checkCuda(cudaMemset(mutations_idx, 0, exp_m->nb_indivs_ * sizeof(int)));
 
-    checkCuda(cudaMalloc((void**) &nb_diff_mutations,
-                         (exp_m->nb_indivs_ + 1) * sizeof(int)));
-    checkCuda(cudaMemset(nb_diff_mutations, 0, (exp_m->nb_indivs_ + 1) * sizeof(int)));
-
-    checkCuda(cudaMalloc((void**) &diff_mutations_offset,
-                         exp_m->nb_indivs_ * sizeof(int)));
-    checkCuda(cudaMemset(diff_mutations_offset, 0, exp_m->nb_indivs_ * sizeof(int)));
-
-
   checkCuda(cudaMalloc((void**) &dna_mutator_list,
                        exp_m->nb_indivs_ * sizeof(GPUDnaMutator)));
 
   current_size_tab_mutation = exp_m->nb_indivs_ * 100;
   checkCuda(cudaMalloc(&tab_mutation,
                        current_size_tab_mutation * sizeof(TypeMutation)));
-
-
-    current_size_tab_diff_mutation = exp_m->nb_indivs_ * 100;
-    checkCuda(cudaMalloc(&tab_diff_mutation,
-                         current_size_tab_diff_mutation * sizeof(int)));
 
   checkCuda(cudaMalloc((void**) &rna_idx,
                        (exp_m->nb_indivs_ + 1) * sizeof(int32_t)));
@@ -1243,27 +1229,13 @@ void generate_mutations(unsigned long long* gpu_counters, size_t* dna_size, int*
     int prev_gen_id = next_generation_reproducer[indiv_id];
     size_t prev_gen_size = dna_size[prev_gen_id];
 
-    // Rearrangement
-    dna_mutator_list[indiv_id].nb_large_dupl_ = rng.binomial_random(prev_gen_size, mutation_r);
-    dna_mutator_list[indiv_id].nb_large_del_ = rng.binomial_random(prev_gen_size, mutation_r);
-
-    dna_mutator_list[indiv_id].nb_rear_ = dna_mutator_list[indiv_id].nb_large_dupl_ + dna_mutator_list[indiv_id].nb_large_del_;
-    dna_mutator_list[indiv_id].cpt_rear_ = dna_mutator_list[indiv_id].nb_rear_;
-
     // Small mutations
     dna_mutator_list[indiv_id].nb_swi_ = rng.
             binomial_random(prev_gen_size, mutation_r);
-    dna_mutator_list[indiv_id].nb_ins_ = rng.
-            binomial_random(prev_gen_size, mutation_r);
-
-    dna_mutator_list[indiv_id].nb_del_ = rng.
-            binomial_random(prev_gen_size, mutation_r);
-
-    dna_mutator_list[indiv_id].nb_mut_ = dna_mutator_list[indiv_id].nb_swi_ + dna_mutator_list[indiv_id].nb_ins_ +
-            dna_mutator_list[indiv_id].nb_del_;
+    dna_mutator_list[indiv_id].nb_mut_ = dna_mutator_list[indiv_id].nb_swi_;
     dna_mutator_list[indiv_id].cpt_mut_ = dna_mutator_list[indiv_id].nb_mut_;
 
-    nb_mutations[indiv_id] = dna_mutator_list[indiv_id].nb_rear_+dna_mutator_list[indiv_id].nb_mut_;
+    nb_mutations[indiv_id] = dna_mutator_list[indiv_id].nb_mut_;
     atomicAdd(nb_mutations+nb_indivs,nb_mutations[indiv_id]);
 }
 
@@ -1308,7 +1280,6 @@ void predict_size_v2(size_t* dna_size, size_t* next_gen_dna_size, GPUDnaMutator*
                      TypeMutation* tab_mut,
                      int* nb_mutations, int* mutations_offset,
                      unsigned long long* gpu_counters,int* next_generation_reproducer,
-                     int* nb_diff_mutations,
                      int max_genome_length,
                      int min_genome_length, int nb_indiv) {
     const int indiv_id = blockIdx.x;
@@ -1317,121 +1288,21 @@ void predict_size_v2(size_t* dna_size, size_t* next_gen_dna_size, GPUDnaMutator*
 
     int transient_size = dna_size[next_generation_reproducer[indiv_id]];
 
-    nb_diff_mutations[indiv_id] = 0;
-
     Threefry::Device rng(gpu_counters,indiv_id,Threefry::Phase::MUTATION,nb_indiv);
 
-    for (int mut_idx = 0; mut_idx <  dna_mutator_list[indiv_id].nb_mut_ +  dna_mutator_list[indiv_id].nb_rear_; mut_idx++) {
-        if (mut_idx <  dna_mutator_list[indiv_id].nb_rear_) {
-            random_value = rng.random( dna_mutator_list[indiv_id].cpt_rear_);
-
-            if (random_value <  dna_mutator_list[indiv_id].nb_large_dupl_) {
-                dna_mutator_list[indiv_id].nb_large_dupl_--;  // Updating the urn (no replacement!)...
-
-                int pos_1 = rng.random(transient_size);
-                int pos_2 = rng.random(transient_size);
-                int pos_3 = rng.random(transient_size);
-
-                auto size_after = transient_size +
-                                  mod(pos_2 - pos_1 - 1, transient_size) + 1;
-                if (size_after <= max_genome_length) {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::DUPLICATION;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_1_ = pos_1;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_2_ = pos_2;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_3_ = pos_3;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].transient_size = transient_size;
-                    transient_size = size_after;
-                    nb_diff_mutations[indiv_id]+=(PROM_SIZE-1)*2;
-                } else {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::NONE;
-                }
-            } else {
-                dna_mutator_list[indiv_id].nb_large_del_--;
-
-                int pos_1 = rng.random(transient_size);
-                int pos_2 = rng.random(transient_size);
-
-                auto size_after = transient_size - (mod(pos_2 - pos_1 - 1, transient_size) + 1);
-
-                if (size_after >= min_genome_length) {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::DELETION;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_1_ = pos_1;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_2_ = pos_2;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].transient_size = transient_size;
-                    transient_size = size_after;
-                    nb_diff_mutations[indiv_id]+=(PROM_SIZE-1);
-                } else {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::NONE;
-                }
-            }
-
-        } else if (dna_mutator_list[indiv_id].cpt_mut_ > 0) {
-            random_value = rng.random(dna_mutator_list[indiv_id].cpt_mut_);
-
+    for (int mut_idx = 0; mut_idx <  dna_mutator_list[indiv_id].nb_mut_; mut_idx++) {
             dna_mutator_list[indiv_id].cpt_mut_--;
 
-            if (random_value <  dna_mutator_list[indiv_id].nb_swi_) {
                 dna_mutator_list[indiv_id].nb_swi_--;
 
                 int pos = rng.random(transient_size);
 
                 tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::DO_SWITCH;
                 tab_mut[mutations_offset[indiv_id]+mut_idx].pos_1_ = pos;
-                nb_diff_mutations[indiv_id]+=(PROM_SIZE-1);
 
-            } else if (random_value <  dna_mutator_list[indiv_id].nb_swi_ +  dna_mutator_list[indiv_id].nb_ins_) {
-                dna_mutator_list[indiv_id].nb_ins_--;
-
-                int pos = rng.random(transient_size);
-                int nb_insert = 1 + rng.random(6);
-
-                auto size_after = transient_size + nb_insert;
-
-                if (size_after <= max_genome_length) {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::SMALL_INSERTION;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_1_ = pos;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].number_ = nb_insert;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].transient_size = transient_size;
-
-                    // Prepare the sequence to be inserted
-                    for (int j = 0; j < nb_insert; ++j) {
-                        char inserted_char = static_cast<char>('0' + rng.random(NB_BASE));
-                        tab_mut[mutations_offset[indiv_id]+mut_idx].seq[j] = inserted_char;
-                    }
-
-                    transient_size = size_after;
-
-                    nb_diff_mutations[indiv_id]+=(PROM_SIZE-1);
-                } else {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::NONE;
-                }
-            } else { // (random_value >= nb_swi + nb_ins) => del
-                dna_mutator_list[indiv_id].nb_del_--;
-
-                int pos = rng.random(transient_size);
-                int nb_del = 1 + rng.random(6);
-
-                auto size_after = transient_size - nb_del;
-
-                if (size_after >= min_genome_length) {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::SMALL_DELETION;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].pos_1_ = pos;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].number_ = nb_del;
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].transient_size = transient_size;
-
-                    transient_size = size_after;
-
-                    nb_diff_mutations[indiv_id]+=(PROM_SIZE-1);
-                } else {
-                    tab_mut[mutations_offset[indiv_id]+mut_idx].type_ = MutationEventType::NONE;
-                }
-            }
-        }
     }
 
     next_gen_dna_size[indiv_id] = transient_size;
-
-    atomicAdd(nb_diff_mutations+nb_indiv,nb_diff_mutations[indiv_id]);
 }
 
 
@@ -1484,33 +1355,6 @@ void compute_next_gen_dna_offset(size_t* next_gen_dna_size, size_t* next_gen_dna
     }
 }
 
-
-__global__
-void compute_nb_diff_mutation_offset(int* nb_diff_mutations, int* diff_mutations_offset) {
-
-    const int indiv_id = blockIdx.x;
-    __shared__ int grid_diff_mutations_offset;
-
-    if (threadIdx.x == 0) {
-        grid_dna_offset = 0;
-    }
-    __syncthreads();
-
-    {
-        int local_diff_mutations_offset = 0;
-        for (int cpt = threadIdx.x; cpt < indiv_id; cpt += blockDim.x) {
-            local_diff_mutations_offset += nb_diff_mutations[cpt];
-        }
-
-        if (local_diff_mutations_offset > 0)
-            atomicAdd(&grid_diff_mutations_offset, local_diff_mutations_offset);
-    }
-    __syncthreads();
-    if (threadIdx.x == 0) {
-        diff_mutations_offset[indiv_id] = grid_diff_mutations_offset;
-    }
-}
-
 __global__ void next_generation_dna_read(char* next_gen_dna, size_t* dna_offset, size_t* dna_size, size_t global_dna_size_max) {
     for (int i = 0; i <1023; i++) {
         if (dna_offset[i]+dna_size[i] != dna_offset[i+1]) {
@@ -1557,48 +1401,6 @@ __global__ void do_mutation_v2(TypeMutation* tab_mut,
                     if (locus == mut.pos_1_)
                         mutate = not mutate;
                     break;
-                case SMALL_DELETION:
-                    if (locus > mut.pos_1_) {
-                        locus += mut.number_;
-                    }
-                    break;
-                case SMALL_INSERTION:
-                    if (locus >= mut.pos_1_ + mut.number_) { // Locus after small insert
-                        locus -= mut.number_;
-                    } else if (locus >= mut.pos_1_) { // Locus in small insert
-                        auto base = mut.seq[locus - mut.pos_1_];
-                        // Switch if needed
-                        if (mutate) base = (base == '0') ? '1' : '0';
-                        next_gen_dna[next_gen_dna_offset[indiv_id]+next_locus] = base;
-                        return;
-                    }
-                    break;
-                case DELETION:
-                    assert(mut.pos_1_ != mut.pos_2_);
-                    if (mut.pos_1_ < mut.pos_2_) {
-                        if (locus > mut.pos_1_) {
-                            locus += mut.pos_2_ - mut.pos_1_;
-                        }
-                    } else {
-                        locus += mut.pos_2_;
-                    }
-                    break;
-                case DUPLICATION:
-                    if (locus >= mut.pos_3_) {
-                        int32_t len = 0;
-                        if (mut.pos_1_ < mut.pos_2_) {
-                            len = mut.pos_2_ - mut.pos_1_;
-                        } else {
-                            len = mut.transient_size - mut.pos_1_ + mut.pos_2_;
-                        }
-
-                        if (locus > mut.pos_3_ + len) {
-                            locus -= len;
-                        } else {
-                            locus = mod(locus + mut.pos_1_ - mut.pos_3_, mut.transient_size);
-                        }
-                    }
-                    break;
             }
         }
 
@@ -1627,42 +1429,11 @@ __global__ void do_mutation_v2(TypeMutation* tab_mut,
 }
 
 
-
-__global__ void compute_diff_DNA(int* tab_diff_mut, int* diff_mutations_offset,
-                               int* nb_mutations, size_t* dna_size) {
-
-    int indiv_id = blockIdx.x;
-
-    int nb_events = nb_mutations[indiv_id];
-    int cpt_diff_mutations = 0;
-    for (; nb_events > 0; nb_events--) {
-        auto &mut = tab_mut[mutations_offset[indiv_id] + nb_events - 1];
-        switch (mut.type_) {
-            case DO_SWITCH:
-                ///
-                break;
-            case SMALL_DELETION:
-                ///
-                break;
-            case SMALL_INSERTION:
-                ///
-                break;
-            case DELETION:
-                ///
-                break;
-            case DUPLICATION:
-                ///
-                break;
-        }
-    }
-}
-
-
 void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, int grid_width, int grid_height, double mutation_rate) {
     int x_dim_size = (host_max_dna_size / 128)+1;
 
     int y_dim_size = nb_indiv;
-  //  printf("DNA 0 %p\n",dna);
+    printf("DNA 0 %p\n",dna);
 
     dim3 dimGrid(x_dim_size,y_dim_size);
 
@@ -1699,7 +1470,7 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
         checkCuda(cudaMalloc(&rna,current_size_rna_list* sizeof(pRNA)));
     }
 
-    //printf("Total number of promoters %d\n",total_nb_promoters_host);
+    printf("Total number of promoters %d\n",total_nb_promoters_host);
 
 
     compute_RNA_offset<<<nb_indiv,128>>>(nb_promoters,rna_offset);
@@ -1716,7 +1487,7 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
                          rna_idx+nb_indiv, sizeof(int), cudaMemcpyDeviceToHost));
 
 
-    //printf("Total number of RNAs %d\n",global_nb_rna);
+    printf("Total number of RNAs %d\n",global_nb_rna);
     compute_RNA<<<global_nb_rna/128+1,128>>>( dna_term,dna_size, dna_offset, rna, global_nb_rna);
 
     cudaDeviceSynchronize();
@@ -1736,7 +1507,7 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
         current_size_protein_list = total_nb_protein_host * 1.1;
         checkCuda(cudaMalloc(&protein,current_size_protein_list* sizeof(pProtein)));
     }
-    //printf("Total number of protein %d\n",total_nb_protein_host);
+    printf("Total number of protein %d\n",total_nb_protein_host);
 
     compute_protein_offset<<<nb_indiv,128>>>(nb_proteins, protein_offset);
 
@@ -1748,7 +1519,7 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
                          protein_idx+nb_indiv, sizeof(int), cudaMemcpyDeviceToHost));
 
 
-    //printf("Total number of Proteins %d\n",global_nb_protein);
+    printf("Total number of Proteins %d\n",global_nb_protein);
 
 
     //printf("Global number of CPU Proteins is %d\n",cpt_prom);
@@ -1785,7 +1556,7 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
         current_size_tab_mutation = total_nb_mutations_host * 1.1;
         checkCuda(cudaMalloc(&tab_mutation,current_size_tab_mutation* sizeof(TypeMutation)));
     }
-    //printf("Display all mut %d\n",total_nb_mutations_host);
+    printf("Display all mut %d\n",total_nb_mutations_host);
 
     int min_genome_length_  = 10;
     int max_genome_length_  = 10000000;
@@ -1833,19 +1604,6 @@ void run_a_step_on_GPU(int nb_indiv, double w_max, double selection_pressure, in
 
 
     compute_next_gen_dna_offset<<<nb_indiv,128>>>(next_gen_dna_size, next_gen_dna_offset);
-
-
-    int total_nb_diff_mutations_host;
-    checkCuda(cudaMemcpy(&total_nb_diff_mutations_host,
-                         nb_diff_mutations+nb_indiv, sizeof(int), cudaMemcpyDeviceToHost));
-
-    if (total_nb_diff_mutations_host > current_size_tab_diff_mutation) {
-        checkCuda(cudaFree(tab_diff_mutation));
-        current_size_tab_diff_mutation = total_nb_diff_mutations_host * 1.1;
-        checkCuda(cudaMalloc(&tab_diff_mutation,current_size_tab_diff_mutation* sizeof(int)));
-    }
-
-    compute_nb_diff_mutation_offset<<nb_indiv,128>>(nb_diff_mutations,diff_mutations_offset);
 
     x_dim_size = (host_max_dna_size / 128)+1;
     y_dim_size = nb_indiv;
@@ -1945,7 +1703,6 @@ void do_memset(double** phenotype_activ, double** phenotype_inhib, int* nb_mutat
 
         if (indiv_id == 0) {
             nb_mutations[nb_indiv] = 0;
-            nb_diff_mutations[nb_indiv] = 0;
 
             rna_idx[nb_indiv] = 0;
             protein_idx[nb_indiv] = 0;

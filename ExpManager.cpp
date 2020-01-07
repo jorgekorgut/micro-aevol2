@@ -9,6 +9,7 @@
 // E-mail: See <jonathan.rouzaud-cornabas@inria.fr>
 // Original Authors : Jonathan Rouzaud-Cornabas
 //
+//
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 2 of the License, or
@@ -34,6 +35,8 @@
 
 #ifdef USE_CUDA
 #include "nvToolsExt.h"
+#include <cuda_profiler_api.h>
+using namespace std::chrono;
 #endif
 
 using namespace std;
@@ -1130,8 +1133,8 @@ void ExpManager::run_evolution(int nb_gen) {
 }
 
 #ifdef USE_CUDA
-// TODO : Udapte
 void ExpManager::run_evolution_on_gpu(int nb_gen) {
+  cudaProfilerStart();
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
   cout << "Transfer" << endl;
   transfer_in(this, true);
@@ -1140,9 +1143,13 @@ void ExpManager::run_evolution_on_gpu(int nb_gen) {
   cout << "Transfer done in " << duration_transfer_in << endl;
 
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
-        // dna_mutator_array_ is set only to have has_mutate() true so that RNA, protein and phenotype will be computed
+        auto rng = std::move(rng_->gen(indiv_id, Threefry::MUTATION));
+
         delete dna_mutator_array_[indiv_id];
-        dna_mutator_array_[indiv_id] = new DnaMutator(nullptr, 0, 0, indiv_id);
+        dna_mutator_array_[indiv_id] = new DnaMutator(
+                &rng,
+                prev_internal_organisms_[next_generation_reproducer_[indiv_id]]->length(),
+                mutation_rate_, indiv_id);
         dna_mutator_array_[indiv_id]->setMutate(true);
 
         opt_prom_compute_RNA(indiv_id);
@@ -1158,7 +1165,7 @@ void ExpManager::run_evolution_on_gpu(int nb_gen) {
         compute_fitness(indiv_id, selection_pressure_);
     }
 
-  printf("Running evolution from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
+  printf("Running evolution GPU from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
   bool firstGen = true;
   for (int gen = 0; gen < nb_gen+1; gen++) {
     if(gen == 91) nvtxRangePushA("generation 91 to 100");
@@ -1176,10 +1183,7 @@ void ExpManager::run_evolution_on_gpu(int nb_gen) {
     firstGen = false;
     if(gen == 100) nvtxRangePop();
     printf("Generation %d : \n",AeTime::time());
-
-    if (AeTime::time() % backup_step_ == 0) {
-      save(AeTime::time());
-    }
   }
+  cudaProfilerStop();
 }
 #endif
