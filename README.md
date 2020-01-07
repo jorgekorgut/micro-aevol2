@@ -14,12 +14,9 @@ These instructions will get you a copy of the project up and running on your loc
 
 What things you need to install the software and how to install them.
 First, you will need to install zlib (and its headers).
-You also need to compile the given SFMT library (that manage the PRNG).
 
 ```
-cd SFMT-src-1.4
-cmake .
-make
+sudo apt install zlib1g-dev
 ```
 
 ### Compilation
@@ -31,7 +28,7 @@ cmake .
 make
 ```
 
-It will produced the executable pdc_mini_aevol.
+It will produced the executable pdc_micro_aevol.
 
 If CUDA toolkit is available on your system, you can build the software with GPU support
 
@@ -40,7 +37,7 @@ cmake . -DUSE_CUDA=on
 make
 ```
 
-It will produced the executable pdc_mini_aevol_gpu.
+It will produced the executable pdc_micro_aevol_gpu.
 
 ## Running a simulation
 
@@ -50,7 +47,7 @@ Basically, you must create a directory to store the simulation files (backup/che
 ```
 mkdir simulation_example_1
 cd simulation_example_1
-../pdc_mini_aevol
+../pdc_micro_aevol
 ```
 
 You can also resume a simulation from a backup/checkpointing file (for example, resuming from the generation 1000):
@@ -66,6 +63,7 @@ More details about the model and its implementation are given at :
 ## Authors
 
 * **Jonathan Rouzaud-Cornabas** - *Initial work*
+* **Laurent Turpin**
 
 For the authors of Aevol software, see [http://www.aevol.fr](http://www.aevol.fr)
 
