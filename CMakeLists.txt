@@ -26,7 +26,6 @@ if ( USE_OMP )
 endif ( USE_OMP )
 
 add_library(micro_aevol ExpManager.cpp ExpManager.h AeTime.cpp AeTime.h DnaMutator.cpp DnaMutator.h MutationEvent.cpp MutationEvent.cpp Organism.cpp Organism.h Promoter.h RNA.h Protein.h Stats.cpp Stats.h Gaussian.h Threefry.cpp Dna.cpp Timetracer.h)
-target_include_directories(micro_aevol INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 find_package(ZLIB REQUIRED)
 if ( ZLIB_FOUND )
