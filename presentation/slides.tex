@@ -158,11 +158,7 @@
   \item Selection $\rightarrow$ Mutation : \textbf{Modify the DNA}
   \only<9>{
   \begin{itemize}
-   \item Small insertion (max = 6) of random value (0 or 1) at some position in DNA
-   \item Small deletion (max = 6) at some position in DNA
    \item Switch of the value of up to 6 value in the DNA array
-   \item Large duplication of a part of the DNA that is inserted at some position
-   \item Large deletion of a part of the DNA
   \end{itemize}
   }
   }
@@ -174,12 +170,12 @@
 \begin{frame}
  \frametitle{Aevol VS mini-Aevol}
  \begin{itemize}
-  \item Aevol VS mini-Aevol SLOC : 87,000 VS 2,000 
+  \item Aevol VS micro-Aevol SLOC : 87,000 VS 2,800 
   \vfill
   \item Simplify model
   \begin{itemize}
   \item Only a strand of DNA (and not too) \textit{i.e.} the DNA is read one-way and not both-way
-  \item A reduce mutation sets: no translocation
+  \item A reduce mutation sets: no mutation that change the size
   \item A lot of advances features are missing: no plasmid, 4bp DNA, ...
   \end{itemize}
   \vfill
@@ -207,10 +203,14 @@
 \begin{frame}
  \frametitle{Optimizations}
  \begin{itemize}
-  \item Working only on diff (where the DNA has changed during the mutation) \textit{i.e.} do not reparse the whole DNA at each generation
+  \item Working only on diff (where the DNA has changed during the mutation) \textit{i.e.} do not reparse the whole DNA at each generation (available in the git repository for sequential CPU)
+  \item Remove the modulo that allows to simulate circular DNA (copy a part of the beginning of the DNA at the end to do it)
   \item Change the coding of the DNA from a char array to a bitset
   \item Vectorization of the comparison between DNA and motifs
   \item Search multiple motifs at once through vectorization
+  \item Evaluate classic mutation operator (malloc+memcpy+mutation) and backtrace mutation operator (malloc+copy)
+  \item One large 1D structure (merge all DNAs into a big DNA) to ease load balancing
+  \item Include metadata (promoter, terminator, start, stop) into a bitset
  \end{itemize}
 \end{frame}
 
@@ -218,13 +218,13 @@
 \begin{frame}
  \frametitle{Parallelization}
  \begin{itemize}
-  \item OpenMP
+  \item OpenMP (parallel for and/or tasks with or without dependency)
   \item CUDA
   \item OpenACC
   \item MPI
   \item Hybrid \textit{e.g.} OpenMP+OpenACC, OpenMP+MPI, ...
   \vfill
-  \item Implement the stencil
+  \item Implement the stencil (\textit{i.e.} asynchronous time between grid cells)
  \end{itemize}
 \end{frame}
 
@@ -237,6 +237,14 @@
  \item For each optimization/parallelization, tests its performance, scalability (weak and strong) and create visualization of them
  \item You need to verify the reproduceability of your code \textit{i.e.}, same parameters must lead to same results
 \end{enumerate}
+\vfill
+Simulation parameters:
+\begin{itemize}
+ \item Size of the DNA ($-g$): 500, 5000, 50,000 (you can go up to 500,000)
+ \item Population size ($-w$ and $-h$) : 32x32, 128x128, 256x256 (you can up to 1024x1024)
+ \item Mutation rate ($-m$) : 0.0001, 0.00001, 0.000001
+\end{itemize}
+
 
  \end{frame}
 
