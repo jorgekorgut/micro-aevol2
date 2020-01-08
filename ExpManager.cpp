@@ -374,10 +374,10 @@ void ExpManager::prepare_mutation(int indiv_id) {
 ExpManager::~ExpManager() {
     delete stats_best;
     delete stats_mean;
-
+/*
     for (auto i = 0; i < nb_indivs_; ++i) {
         delete dna_mutator_array_[i];
-    }
+    }*/
     delete[] dna_mutator_array_;
 
     delete[] internal_organisms_;
