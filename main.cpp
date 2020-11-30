@@ -40,7 +40,7 @@ void print_help(char* prog_path) {
 
     printf("******************************************************************************\n");
     printf("*                                                                            *\n");
-    printf("*                   mini-aevol - Artificial Evolution                        *\n");
+    printf("*                   micro-aevol - Artificial Evolution                       *\n");
     printf("*                                                                            *\n");
     printf("* Aevol is a simulation platform that allows one to let populations of       *\n");
     printf("* digital organisms evolve in different conditions and study experimentally  *\n");
@@ -54,11 +54,11 @@ void print_help(char* prog_path) {
     printf("*                                                                            *\n");
     printf("******************************************************************************\n");
     printf("\n");
-    printf("Usage : %s -e or --help\n", prog_name);
+    printf("Usage : %s -H or --help\n", prog_name);
     printf("   or : %s \n", prog_name);
     printf("   or : %s -r GENERATION_STEP\n", prog_name);
     printf("\nOptions\n");
-    printf("  -e, --help\tprint this help, then exit\n");
+    printf("  -H, --help\tprint this help, then exit\n");
     printf("  -n, --nbsteps\tNumber of generation to run\n");
     printf("  -w, --width WIDTH_SIZE\tWidth of the population grid is WIDTH_SIZE\n");
     printf("  -h, --height HEIGHT_SIZE\tHeight of the population grid is HEIGHT_SIZE\n");
@@ -66,6 +66,7 @@ void print_help(char* prog_path) {
     printf("  -g, --genome_size GENOME_SIZE\tGenome at the initial genome is GENOME_SIZE bps\n");
     printf("  -b, --backup_step BACKUP_STEP\tDo a simulation backup/checkpoint every BACKUP_STEP\n");
     printf("  -r, --resume RESUME_STEP\tResume the simulation from the RESUME_STEP generations\n");
+    printf("  -s, --seed SEED\tChange the seed for the pseudo random generator\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -79,10 +80,10 @@ int main(int argc, char* argv[]) {
     int backup_step = -1;
     int seed = -1;
 
-    const char * options_list = "e:::n:w:h:m:g:b:r:s:";
+    const char * options_list = "Hn:w:h:m:g:b:r:s:";
     static struct option long_options_list[] = {
             // Print help
-            { "help",     no_argument,        NULL, 'e' },
+            { "help",     no_argument,        NULL, 'H' },
             // Number of generations to be run
             { "nsteps",  required_argument,  NULL, 'n' },
             // Width size of the grid
