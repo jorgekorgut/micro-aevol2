@@ -15,8 +15,18 @@
 
 constexpr int8_t CODON_SIZE = 3;
 
+// promoter
+constexpr int8_t PROM_LENGTH = 22;
 constexpr const char* PROM_SEQ = "0101011001110010010110";
-constexpr const char* SHINE_DAL_SEQ = "011011000";
+// terminator
+constexpr int8_t TERM_STEM_SIZE = 4;
+constexpr int8_t TERM_LOOP_SIZE = 2;
+constexpr int8_t TERMINATOR_SIZE = TERM_STEM_SIZE + TERM_LOOP_SIZE + TERM_STEM_SIZE;
+// shine dalgardo
+constexpr int8_t SHINE_DAL_SIZE = 6;
+constexpr int8_t SD_START_SPACER = 4;
+constexpr const char* SHINE_DAL_SEQ = "011011****000";
+// stop
 constexpr const char* PROTEIN_END = "001"; // CODON_STOP
 
 class ExpManager;

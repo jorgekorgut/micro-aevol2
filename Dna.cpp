@@ -122,20 +122,15 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 }
 
 int Dna::promoter_at(int pos) {
-  int prom_dist[22];
+  int prom_dist[PROM_SIZE];
 
-  for (int motif_id = 0; motif_id < 22; motif_id++) {
+  for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++) {
+    int search_pos = pos + motif_id;
+    if (search_pos >= seq_.size())
+        search_pos -= seq_.size();
     // Searching for the promoter
     prom_dist[motif_id] =
-        PROM_SEQ[motif_id] ==
-        seq_[
-            pos + motif_id >= seq_.size() ? pos +
-                                            motif_id -
-                                            seq_.size()
-                                          : pos +
-                                            motif_id]
-        ? 0
-        : 1;
+            PROM_SEQ[motif_id] == seq_[search_pos] ? 0 : 1;
 
   }
 
@@ -167,24 +162,19 @@ int Dna::promoter_at(int pos) {
   return dist_lead;
 }
 
+// Given a, b, c, d boolean variable and X random boolean variable,
+// a terminator look like : a b c d X X X !d !c !b !a
 int Dna::terminator_at(int pos) {
-  int term_dist[4];
-  for (int motif_id = 0; motif_id < 4; motif_id++) {
-
+  int term_dist[TERM_STEM_SIZE];
+  for (int motif_id = 0; motif_id < TERM_STEM_SIZE; motif_id++) {
+      int right = pos + motif_id;
+      if (right >= seq_.size())
+          right -= seq_.size();
+      int left = pos + TERMINATOR_SIZE - motif_id;
+      if (left >= seq_.size())
+          left -= seq_.size();
     // Search for the terminators
-    term_dist[motif_id] =
-        seq_[
-            pos + motif_id >= seq_.size() ? pos +
-                                            motif_id -
-                                            seq_.size() :
-            pos + motif_id] !=
-        seq_[
-            pos - motif_id + 10 >= seq_.size() ?
-            pos - motif_id + 10 - seq_.size() :
-            pos -
-            motif_id +
-            10] ? 1
-                : 0;
+    term_dist[motif_id] = seq_[right] != seq_[left] ? 1 : 0;
   }
   int dist_term_lead = term_dist[0] +
                        term_dist[1] +
@@ -198,14 +188,13 @@ bool Dna::shine_dal_start(int pos) {
   bool start = false;
   int t_pos, k_t;
 
-  for (int k = 0; k < 9; k++) {
-    k_t = k >= 6 ? k + 4 : k;
-    t_pos = pos + k_t >= seq_.size() ? pos + k_t -
-                                       seq_.size()
-                                     : pos + k_t;
+  for (int k = 0; k < SHINE_DAL_SIZE + CODON_SIZE; k++) {
+    k_t = k >= SHINE_DAL_SIZE ? k + SD_START_SPACER : k;
+    t_pos = pos + k_t;
+    if (t_pos >= seq_.size())
+        t_pos -= seq_.size();
 
-    if (seq_[t_pos] ==
-        SHINE_DAL_SEQ[k]) {
+    if (seq_[t_pos] == SHINE_DAL_SEQ[k_t]) {
       start = true;
     } else {
       start = false;
@@ -220,13 +209,12 @@ bool Dna::protein_stop(int pos) {
   bool is_protein;
   int t_k;
 
-  for (int k = 0; k < 3; k++) {
-    t_k = pos + k >= seq_.size() ?
-          pos - seq_.size() + k :
-          pos + k;
+  for (int k = 0; k < CODON_SIZE; k++) {
+    t_k = pos + k;
+    if (t_k >= seq_.size())
+        t_k -= seq_.size();
 
-    if (seq_[t_k] ==
-        PROTEIN_END[k]) {
+    if (seq_[t_k] == PROTEIN_END[k]) {
       is_protein = true;
     } else {
       is_protein = false;
@@ -242,11 +230,10 @@ int Dna::codon_at(int pos) {
 
   int t_pos;
 
-  for (int i = 0; i < 3; i++) {
-    t_pos =
-        pos + i >= seq_.size() ? pos + i -
-                                 seq_.size()
-                               : pos + i;
+  for (int i = 0; i < CODON_SIZE; i++) {
+    t_pos = pos + i;
+    if (t_pos >= seq_.size())
+        t_pos -= seq_.size();
     if (seq_[t_pos] == '1')
       value += 1 << (CODON_SIZE - i - 1);
   }
