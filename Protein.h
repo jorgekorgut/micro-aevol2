@@ -32,7 +32,7 @@
  */
 class Protein {
 public:
-    Protein() {};
+    Protein() = default;
     Protein(int t_protein_start, int t_protein_end, int t_protein_length, double t_e) {
         protein_start = t_protein_start;
         protein_end = t_protein_end;
@@ -41,15 +41,15 @@ public:
         is_init_ = true;
     }
 
-    int protein_start;
-    int protein_end;
-    int protein_length;
+    int protein_start = 0;
+    int protein_end = 0;
+    int protein_length = 0;
 
-    double m;
-    double w;
-    double h;
-    double e;
-    bool is_functional;
+    double m = 0.0;
+    double w = 0.0;
+    double h = 0.0;
+    double e = 0.0;
+    bool is_functional = false;
 
     bool is_init_ = false;
 };

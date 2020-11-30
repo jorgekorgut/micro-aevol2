@@ -34,7 +34,6 @@
 #include <zlib.h>
 #include <list>
 
-#include "Promoter.h"
 #include "RNA.h"
 #include "Protein.h"
 #include "Dna.h"
@@ -69,8 +68,9 @@ public:
     void compute_protein_stats();
 
 
+    using ErrorType = int8_t;
     // Map position (int) to Promoter
-    std::map<int, Promoter> promoters_;
+    std::map<int, ErrorType> promoters_;
 
     std::set<int> terminators;
     std::vector<RNA *> rnas;

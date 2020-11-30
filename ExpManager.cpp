@@ -452,8 +452,7 @@ void ExpManager::start_stop_RNA(int indiv_id) {
             int dist_term_lead = internal_organisms_[indiv_id]->dna_->terminator_at(dna_pos);
 
             if (dist_term_lead == 4) {
-                internal_organisms_[indiv_id]->terminators.insert(
-                        dna_pos);
+                internal_organisms_[indiv_id]->terminators.insert(dna_pos);
             }
         }
     }
@@ -522,7 +521,7 @@ void ExpManager::opt_prom_compute_RNA(int indiv_id) {
                             prom_pos,
                             rna_end,
                             1.0 - std::fabs(
-                                    ((float) prom_pair.second.error)) / 5.0,
+                                    ((float) prom_pair.second)) / 5.0,
                             rna_length);
                 }
             }
@@ -577,7 +576,7 @@ void ExpManager::compute_RNA(int indiv_id) {
             internal_organisms_[indiv_id]->rnas[glob_rna_idx] =
                     new RNA(prom_pos,
                             rna_end,
-                            1.0 - std::fabs(((float) prom_pair.second.error)) / 5.0,
+                            1.0 - std::fabs(((float) prom_pair.second)) / 5.0,
                             rna_length);
         }
     }

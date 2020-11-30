@@ -36,6 +36,7 @@
 class RNA {
 public:
     RNA() {};
+
     RNA(int t_begin, int t_end, double t_e, int t_length) {
         begin = t_begin;
         end = t_end;
@@ -52,9 +53,6 @@ public:
     std::vector<int> start_prot;
     int length;
     bool is_coding_;
-
-    // in the code is_init_ is always true and never turn to false
-    // bool is_init_ = false;
 };
 
 #endif //PDC_MINI_AEVOL_RNA_H

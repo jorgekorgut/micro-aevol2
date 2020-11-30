@@ -249,7 +249,7 @@ void Organism::add_new_promoter(int32_t position, int8_t error) {
     // TODO: Insertion should not always occur, especially if promoter become better or worse ?
     // Promoters are deleted anyway if victim of mutation. the IF stays unnecessary
     if (promoters_.find(position) == promoters_.end())
-        promoters_[position] = Promoter(position, error);
+        promoters_[position] = error;
 }
 
 void Organism::look_for_new_promoters_starting_between(int32_t pos_1, int32_t pos_2) {
