@@ -51,10 +51,10 @@ private:
 
 		public:
 
-				Gen(const Gen&) = delete;
+			Gen(const Gen&) = delete;
 			Gen& operator=(const Gen&) = delete;
 
-				Gen(Gen&& other) {
+			Gen(Gen&& other) {
 				parent_ = other.parent_;
 				other.parent_ = nullptr;
 				state_ = other.state_;
@@ -63,6 +63,7 @@ private:
 				parent_ = other.parent_;
 				other.parent_ = nullptr;
 				state_ = other.state_;
+                return *this;
 			}
 
 			~Gen() {
