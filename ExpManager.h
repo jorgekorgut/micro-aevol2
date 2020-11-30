@@ -64,74 +64,81 @@ class Stats;
 class ExpManager {
 
 
-    public:
-        ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
-                   double w_max, int selection_pressure, int backup_step);
-        ExpManager(int time);
-        ~ExpManager();
+public:
+    ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
+               double w_max, int selection_pressure, int backup_step);
 
-        void create_directory();
-        void save(int t);
+    ExpManager(int time);
 
-        void load(int t);
+    ~ExpManager();
 
-        void run_evolution(int nb_gen);
+    static void create_directory();
+
+    void save(int t);
+
+    void load(int t);
+
+    void run_evolution(int nb_gen);
 
 #ifdef USE_CUDA
-        void run_evolution_on_gpu(int nb_gen);
+    void run_evolution_on_gpu(int nb_gen);
 #endif
 
-        void run_a_step(double w_max, double selection_pressure, bool first_gen);
+    void run_a_step(double w_max, double selection_pressure, bool first_gen);
 
-        void prepare_mutation(int indiv_id);
-        void selection(int indiv_id);
+    void prepare_mutation(int indiv_id);
 
-        inline void apply_mutation(int indiv_id) {
-            internal_organisms_[indiv_id]->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
-        }
+    void selection(int indiv_id);
 
-        void start_stop_RNA(int indiv_id);
-        void compute_RNA(int indiv_id);
+    inline void apply_mutation(int indiv_id) {
+        internal_organisms_[indiv_id]->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
+    }
 
-        void opt_prom_compute_RNA(int indiv_id);
+    void start_stop_RNA(int indiv_id);
 
-        void start_protein(int indiv_id);
-        void compute_protein(int indiv_id);
+    void compute_RNA(int indiv_id);
 
-        void translate_protein(int indiv_id, double w_max);
+    void opt_prom_compute_RNA(int indiv_id);
 
-        void compute_phenotype(int indiv_id);
-        void compute_fitness(int indiv_id, double selection_pressure);
+    void start_protein(int indiv_id);
 
-        std::shared_ptr<Organism>* internal_organisms_;
-        std::shared_ptr<Organism>* prev_internal_organisms_;
-        std::shared_ptr<Organism> best_indiv;
+    void compute_protein(int indiv_id);
 
-        int* next_generation_reproducer_;
-        DnaMutator** dna_mutator_array_;
+    void translate_protein(int indiv_id, double w_max);
 
-        int nb_indivs_;
+    void compute_phenotype(int indiv_id);
 
-        std::unique_ptr<Threefry> rng_;
+    void compute_fitness(int indiv_id, double selection_pressure);
 
-        double geometric_area_;
+    std::shared_ptr<Organism> *internal_organisms_;
+    std::shared_ptr<Organism> *prev_internal_organisms_;
+    std::shared_ptr<Organism> best_indiv;
 
-        double* target;
+    int *next_generation_reproducer_;
+    DnaMutator **dna_mutator_array_;
 
-        int selection_pressure_;
+    int nb_indivs_;
+
+    std::unique_ptr<Threefry> rng_;
+
+    double geometric_area_;
+
+    double *target;
+
+    int selection_pressure_;
     //private:
-        Stats* stats_best = nullptr;
-        Stats* stats_mean = nullptr;
+    Stats *stats_best = nullptr;
+    Stats *stats_mean = nullptr;
 
 
-        int grid_height_;
-        int grid_width_;
+    int grid_height_;
+    int grid_width_;
 
-        double mutation_rate_;
+    double mutation_rate_;
 
-        double w_max_;
+    double w_max_;
 
-        int backup_step_;
+    int backup_step_;
 };
 
 

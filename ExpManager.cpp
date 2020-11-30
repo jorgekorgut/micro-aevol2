@@ -335,7 +335,7 @@ void ExpManager::load(int t) {
  * @param indiv_id : Organism unique id
  */
 void ExpManager::prepare_mutation(int indiv_id) {
-    auto* rng = new Threefry::Gen(std::move(rng_->gen(indiv_id, Threefry::MUTATION)));
+    auto *rng = new Threefry::Gen(std::move(rng_->gen(indiv_id, Threefry::MUTATION)));
     const shared_ptr<Organism> &parent = prev_internal_organisms_[next_generation_reproducer_[indiv_id]];
     dna_mutator_array_[indiv_id] = new DnaMutator(
             rng,
@@ -1126,35 +1126,11 @@ void ExpManager::run_evolution_on_gpu(int nb_gen) {
   auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
   cout << "Transfer done in " << duration_transfer_in << endl;
 
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
-        auto rng = std::move(rng_->gen(indiv_id, Threefry::MUTATION));
-
-        delete dna_mutator_array_[indiv_id];
-        dna_mutator_array_[indiv_id] = new DnaMutator(
-                &rng,
-                prev_internal_organisms_[next_generation_reproducer_[indiv_id]]->length(),
-                mutation_rate_, indiv_id);
-        dna_mutator_array_[indiv_id]->setMutate(true);
-
-        opt_prom_compute_RNA(indiv_id);
-        //compute_RNA(indiv_id);
-
-        start_protein(indiv_id);
-        compute_protein(indiv_id);
-
-        translate_protein(indiv_id, w_max_);
-
-        compute_phenotype(indiv_id);
-
-        compute_fitness(indiv_id, selection_pressure_);
-    }
-
   printf("Running evolution GPU from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
   bool firstGen = true;
   for (int gen = 0; gen < nb_gen+1; gen++) {
     if(gen == 91) nvtxRangePushA("generation 91 to 100");
     AeTime::plusplus();
-      //run_a_step(w_max_,selection_pressure_,firstGen);
 
       high_resolution_clock::time_point t1 = high_resolution_clock::now();
       run_a_step_on_GPU(nb_indivs_, w_max_, selection_pressure_, grid_width_, grid_height_,mutation_rate_);
