@@ -166,7 +166,7 @@ bool Organism::do_switch(int pos) {
  * Apply all the mutation events of the organism on its DNA
  */
 void Organism::apply_mutations(const list<MutationEvent *> &mutation_list) {
-    for (const auto* mutation: mutation_list) {
+    for (const auto *mutation: mutation_list) {
         switch (mutation->type()) {
             case DO_SWITCH:
                 do_switch(mutation->pos_1());
@@ -226,7 +226,7 @@ void Organism::remove_promoters_starting_between(int32_t pos_1, int32_t pos_2) {
         remove_promoters_starting_before(pos_2);
     } else {
         // suppression is in [pos1, pos_2[, pos_2 is excluded
-        promoters_.erase(promoters_.lower_bound(pos_1), promoters_.upper_bound(pos_2-1));
+        promoters_.erase(promoters_.lower_bound(pos_1), promoters_.upper_bound(pos_2 - 1));
     }
 }
 
@@ -236,7 +236,7 @@ void Organism::remove_promoters_starting_after(int32_t pos) {
 
 void Organism::remove_promoters_starting_before(int32_t pos) {
     // suppression is in [0, pos[, pos is excluded
-    promoters_.erase(promoters_.begin(), promoters_.upper_bound(pos-1));
+    promoters_.erase(promoters_.begin(), promoters_.upper_bound(pos - 1));
 }
 
 
@@ -248,7 +248,7 @@ void Organism::locate_promoters() {
 void Organism::add_new_promoter(int32_t position, int8_t error) {
     // TODO: Insertion should not always occur, especially if promoter become better or worse ?
     // Promoters are deleted anyway if victim of mutation. the IF stays unnecessary
-    if(promoters_.find(position) == promoters_.end())
+    if (promoters_.find(position) == promoters_.end())
         promoters_[position] = Promoter(position, error);
 }
 

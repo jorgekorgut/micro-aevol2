@@ -17,7 +17,7 @@ constexpr int8_t CODON_SIZE = 3;
 
 // promoter
 constexpr int8_t PROM_LENGTH = 22;
-constexpr const char* PROM_SEQ = "0101011001110010010110";
+constexpr const char *PROM_SEQ = "0101011001110010010110";
 // terminator
 constexpr int8_t TERM_STEM_SIZE = 4;
 constexpr int8_t TERM_LOOP_SIZE = 2;
@@ -25,52 +25,53 @@ constexpr int8_t TERMINATOR_SIZE = TERM_STEM_SIZE + TERM_LOOP_SIZE + TERM_STEM_S
 // shine dalgardo
 constexpr int8_t SHINE_DAL_SIZE = 6;
 constexpr int8_t SD_START_SPACER = 4;
-constexpr const char* SHINE_DAL_SEQ = "011011****000";
+constexpr const char *SHINE_DAL_SEQ = "011011****000";
 // stop
-constexpr const char* PROTEIN_END = "001"; // CODON_STOP
+constexpr const char *PROTEIN_END = "001"; // CODON_STOP
 
 class ExpManager;
 
 class Dna {
 
- public:
-  Dna() = default;
+public:
+    Dna() = default;
 
-  Dna(const Dna& clone) = default;
+    Dna(const Dna &clone) = default;
 
-  Dna(int length, Threefry::Gen &&rng);
+    Dna(int length, Threefry::Gen &&rng);
 
-  ~Dna() = default;
+    ~Dna() = default;
 
-  int length() const;
+    int length() const;
 
-  void save(gzFile backup_file);
-  void load(gzFile backup_file);
+    void save(gzFile backup_file);
 
-  void set(int pos, char c);
+    void load(gzFile backup_file);
 
-  /// Remove the DNA inbetween pos_1 and pos_2
-  void remove(int pos_1, int pos_2);
+    void set(int pos, char c);
 
-  /// Insert a sequence of a given length at a given position into the DNA of the Organism
-  void insert(int pos, std::vector<char> seq);
+    /// Remove the DNA inbetween pos_1 and pos_2
+    void remove(int pos_1, int pos_2);
 
-  /// Insert a sequence of a given length at a given position into the DNA of the Organism
-  void insert(int pos, Dna* seq);
+    /// Insert a sequence of a given length at a given position into the DNA of the Organism
+    void insert(int pos, std::vector<char> seq);
 
-  void do_switch(int pos);
+    /// Insert a sequence of a given length at a given position into the DNA of the Organism
+    void insert(int pos, Dna *seq);
 
-  void do_duplication(int pos_1, int pos_2, int pos_3);
+    void do_switch(int pos);
 
-  int promoter_at(int pos);
+    void do_duplication(int pos_1, int pos_2, int pos_3);
 
-  int terminator_at(int pos);
+    int promoter_at(int pos);
 
-  bool shine_dal_start(int pos);
+    int terminator_at(int pos);
 
-  bool protein_stop(int pos);
+    bool shine_dal_start(int pos);
 
-  int codon_at(int pos);
+    bool protein_stop(int pos);
 
-  std::vector<char> seq_;
+    int codon_at(int pos);
+
+    std::vector<char> seq_;
 };
