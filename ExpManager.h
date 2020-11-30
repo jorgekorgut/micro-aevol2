@@ -31,10 +31,7 @@
 
 #include "Threefry.h"
 #include "DnaMutator.h"
-#include "Stats.h"
-
-
-#include <memory>
+#include "Organism.h"
 
 constexpr int8_t NB_BASE = 2;
 
@@ -57,9 +54,7 @@ constexpr double H_MIN = -1.0;
 constexpr double H_MAX = 1.0;
 constexpr double W_MIN = 0.0;
 
-class Organism;
 class Stats;
-
 
 /**
  * Main class of the simulator.
@@ -91,7 +86,9 @@ class ExpManager {
         void prepare_mutation(int indiv_id);
         void selection(int indiv_id);
 
-        inline void apply_mutation(int indiv_id) { internal_organisms_[indiv_id]->apply_mutations(); }
+        inline void apply_mutation(int indiv_id) {
+            internal_organisms_[indiv_id]->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
+        }
 
         void start_stop_RNA(int indiv_id);
         void compute_RNA(int indiv_id);

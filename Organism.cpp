@@ -26,76 +26,39 @@
 
 
 
-#include <cstring>
 #include "Organism.h"
 #include "ExpManager.h"
-
-#include <iostream>
 
 using namespace std;
 
 /**
  * Constructor to generate a random organism (i.e. an organism with a random DNA)
  *
- * @param exp_m : Related ExpManager object
  * @param length : Length of the generated random DNA
- * @param indiv_id : Unique Identification Number
  */
-Organism::Organism(ExpManager *exp_m, int length, int indiv_id) {
-    exp_m_ = exp_m;
-
+Organism::Organism(int length, Threefry::Gen &&rng) {
     rna_count_ = 0;
 
-    auto rng = exp_m->rng_->gen(indiv_id, Threefry::MUTATION);
-    dna_ = new Dna(length, rng);
-    parent_length_ = length;
-    indiv_id_ = indiv_id;
-}
-
-/**
- * Create an organism with a given genome
- *
- * @param exp_m : Related ExpManager object
- * @param genome : Genome to assign to the organism
- * @param indiv_id : Unique Identification Number
- */
-Organism::Organism(ExpManager *exp_m, char *genome, int indiv_id) {
-    exp_m_ = exp_m;
-
-    rna_count_ = 0;
-
-    dna_ = new Dna(genome, strlen(genome));
-    parent_length_ = strlen(genome);
-    indiv_id_ = indiv_id;
-
+    dna_ = new Dna(length, std::move(rng));
 }
 
 /**
  * Constructor to create a clone of a given Organism
  *
- * @param exp_m : Related ExpManager object
  * @param clone : The organism to clone
  */
-Organism::Organism(ExpManager *exp_m, const std::shared_ptr<Organism> &clone) {
-    exp_m_ = exp_m;
-
+Organism::Organism(const std::shared_ptr<Organism> &clone) {
     rna_count_ = 0;
-
-    parent_length_ = clone->length();
     dna_ = new Dna(*(clone->dna_));
-
     promoters_ = clone->promoters_;
 }
 
 /**
  * Create an Organism from a backup/checkpointing file
  *
- * @param exp_m : Related ExpManager object
  * @param backup_file : gzFile to read from
  */
-Organism::Organism(ExpManager *exp_m, gzFile backup_file) {
-    exp_m_ = exp_m;
-
+Organism::Organism(gzFile backup_file) {
     rna_count_ = 0;
 
     load(backup_file);
@@ -125,13 +88,7 @@ Organism::~Organism() {
  *
  * @param backup_file : where to the save the organism
  */
-void Organism::save(gzFile backup_file) {
-    gzwrite(backup_file, &indiv_id_, sizeof(indiv_id_));
-    gzwrite(backup_file, &parent_id_, sizeof(parent_id_));
-    gzwrite(backup_file, &global_id, sizeof(global_id));
-
-    gzwrite(backup_file, &parent_length_, sizeof(parent_length_));
-
+void Organism::save(gzFile backup_file) const {
     dna_->save(backup_file);
 }
 
@@ -141,12 +98,6 @@ void Organism::save(gzFile backup_file) {
  * @param backup_file : from where restore the organism
  */
 void Organism::load(gzFile backup_file) {
-    gzread(backup_file, &indiv_id_, sizeof(indiv_id_));
-    gzread(backup_file, &parent_id_, sizeof(parent_id_));
-    gzread(backup_file, &global_id, sizeof(global_id));
-
-    gzread(backup_file, &parent_length_, sizeof(parent_length_));
-
     dna_ = new Dna();
     dna_->load(backup_file);
 }
@@ -214,10 +165,8 @@ bool Organism::do_switch(int pos) {
 /**
  * Apply all the mutation events of the organism on its DNA
  */
-void Organism::apply_mutations() {
-    auto mutation_list = exp_m_->dna_mutator_array_[indiv_id_]->mutation_list_;
-
-    for (const auto mutation: mutation_list) {
+void Organism::apply_mutations(const list<MutationEvent *> &mutation_list) {
+    for (const auto* mutation: mutation_list) {
         switch (mutation->type()) {
             case DO_SWITCH:
                 do_switch(mutation->pos_1());
@@ -226,7 +175,6 @@ void Organism::apply_mutations() {
                 break;
         }
     }
-
 }
 
 /**
@@ -236,8 +184,7 @@ Optimize promoters search
 
 void Organism::remove_promoters_around(int32_t pos) {
     if (dna_->length() >= PROM_SIZE) {
-        remove_promoters_starting_between(mod(pos - PROM_SIZE + 1,
-                                              dna_->length()),
+        remove_promoters_starting_between(mod(pos - PROM_SIZE + 1, dna_->length()),
                                           pos);
     } else {
         remove_all_promoters();
@@ -246,8 +193,7 @@ void Organism::remove_promoters_around(int32_t pos) {
 
 void Organism::remove_promoters_around(int32_t pos_1, int32_t pos_2) {
     if (mod(pos_1 - pos_2, dna_->length()) >= PROM_SIZE) {
-        remove_promoters_starting_between(mod(pos_1 - PROM_SIZE + 1,
-                                              dna_->length()),
+        remove_promoters_starting_between(mod(pos_1 - PROM_SIZE + 1, dna_->length()),
                                           pos_2);
     } else {
         remove_all_promoters();
@@ -256,17 +202,15 @@ void Organism::remove_promoters_around(int32_t pos_1, int32_t pos_2) {
 
 void Organism::look_for_new_promoters_around(int32_t pos_1, int32_t pos_2) {
     if (dna_->length() >= PROM_SIZE) {
-        look_for_new_promoters_starting_between(
-                mod(pos_1 - PROM_SIZE + 1,
-                    dna_->length()), pos_2);
+        look_for_new_promoters_starting_between(mod(pos_1 - PROM_SIZE + 1, dna_->length()),
+                                                pos_2);
     }
 }
 
 void Organism::look_for_new_promoters_around(int32_t pos) {
     if (dna_->length() >= PROM_SIZE) {
-        look_for_new_promoters_starting_between(
-                mod(pos - PROM_SIZE + 1, dna_->length()),
-                pos);
+        look_for_new_promoters_starting_between(mod(pos - PROM_SIZE + 1, dna_->length()),
+                                                pos);
     }
 }
 

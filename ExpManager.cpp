@@ -48,6 +48,7 @@ using namespace std;
 #include "Protein.h"
 #include "Organism.h"
 #include "Gaussian.h"
+#include "Stats.h"
 
 #include <utility>
 
@@ -86,9 +87,9 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     mutation_rate_ = mutation_rate;
 
     // Building the target environment
-    Gaussian *g1 = new Gaussian(1.2, 0.52, 0.12);
-    Gaussian *g2 = new Gaussian(-1.4, 0.5, 0.07);
-    Gaussian *g3 = new Gaussian(0.3, 0.8, 0.03);
+    auto *g1 = new Gaussian(1.2, 0.52, 0.12);
+    auto *g2 = new Gaussian(-1.4, 0.5, 0.07);
+    auto *g3 = new Gaussian(0.3, 0.8, 0.03);
 
     target = new double[300];
     for (int i = 0; i < 300; i++) {
@@ -127,23 +128,17 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     double r_compare = 0;
 
     while (r_compare >= 0) {
-        auto random_organism = std::make_shared<Organism>(this, init_length_dna, 0);
+        auto random_organism = std::make_shared<Organism>(init_length_dna, rng_->gen(0, Threefry::MUTATION));
         internal_organisms_[0] = random_organism;
-
         start_stop_RNA(0);
         compute_RNA(0);
-
         start_protein(0);
         compute_protein(0);
-
         translate_protein(0, w_max);
-
         compute_phenotype(0);
-
         compute_fitness(0, selection_pressure);
 
         r_compare = round((random_organism->metaerror - geometric_area_) * 1E10) / 1E10;
-
     }
 
     printf("Populating the environment\n");
@@ -151,10 +146,7 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     // Create a population of clones based on the randomly generated organism
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id] =
-                std::make_shared<Organism>(this, internal_organisms_[0]);
-        internal_organisms_[indiv_id]->indiv_id_ = indiv_id;
-        internal_organisms_[indiv_id]->parent_id_ = 0;
-        internal_organisms_[indiv_id]->global_id = AeTime::time() * nb_indivs_ + indiv_id;
+                std::make_shared<Organism>(internal_organisms_[0]);
     }
 
     // Create backup and stats directory
@@ -325,7 +317,7 @@ void ExpManager::load(int t) {
 
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id] =
-                std::make_shared<Organism>(this, exp_backup_file);
+                std::make_shared<Organism>(exp_backup_file);
         // promoters have to be recomputed, they are not save in the backup
         start_stop_RNA(indiv_id);
     }
@@ -343,27 +335,20 @@ void ExpManager::load(int t) {
  * @param indiv_id : Organism unique id
  */
 void ExpManager::prepare_mutation(int indiv_id) {
-    Threefry::Gen *rng = new Threefry::Gen(std::move(rng_->gen(indiv_id, Threefry::MUTATION)));
+    auto* rng = new Threefry::Gen(std::move(rng_->gen(indiv_id, Threefry::MUTATION)));
+    const shared_ptr<Organism> &parent = prev_internal_organisms_[next_generation_reproducer_[indiv_id]];
     dna_mutator_array_[indiv_id] = new DnaMutator(
             rng,
-            prev_internal_organisms_[next_generation_reproducer_[indiv_id]]->length(),
+            parent->length(),
             mutation_rate_, indiv_id);
     dna_mutator_array_[indiv_id]->generate_mutations();
 
     if (dna_mutator_array_[indiv_id]->hasMutate()) {
-        internal_organisms_[indiv_id] =
-                std::make_shared<Organism>(this, prev_internal_organisms_[next_generation_reproducer_[indiv_id]]);
-
-        internal_organisms_[indiv_id]->global_id = AeTime::time() * nb_indivs_ + indiv_id;
-        internal_organisms_[indiv_id]->indiv_id_ = indiv_id;
-        internal_organisms_[indiv_id]->parent_id_ = next_generation_reproducer_[indiv_id];
-
+        internal_organisms_[indiv_id] = std::make_shared<Organism>(parent);
     } else {
         int parent_id = next_generation_reproducer_[indiv_id];
 
         internal_organisms_[indiv_id] = prev_internal_organisms_[parent_id];
-
-        internal_organisms_[indiv_id]->usage_count_++;
         internal_organisms_[indiv_id]->reset_mutation_stats();
     }
 }

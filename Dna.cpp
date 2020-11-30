@@ -5,21 +5,11 @@
 #include "Dna.h"
 #include "ExpManager.h"
 
-Dna::Dna(const Dna& clone) : seq_(clone.seq_) {
-}
-
-Dna::Dna(int length, Threefry::Gen& rng) : seq_(length) {
+Dna::Dna(int length, Threefry::Gen &&rng) : seq_(length) {
   // Generate a random genome
   for (int32_t i = 0; i < length; i++) {
     seq_[i] = '0' + rng.random(NB_BASE);
   }
-}
-
-Dna::Dna(char* genome, int length) : seq_(length) {
-  strcpy(seq_.data(), genome);
-}
-
-Dna::Dna(int length) : seq_(length) {
 }
 
 int Dna::length() const {
@@ -257,8 +247,7 @@ int Dna::codon_at(int pos) {
         pos + i >= seq_.size() ? pos + i -
                                  seq_.size()
                                : pos + i;
-    if (seq_[t_pos] ==
-        '1')
+    if (seq_[t_pos] == '1')
       value += 1 << (CODON_SIZE - i - 1);
   }
 

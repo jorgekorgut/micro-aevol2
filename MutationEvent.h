@@ -50,9 +50,9 @@ class MutationEvent {
     void switch_pos(int32_t pos);
 
 
-    int32_t type() { return type_; };
+    int32_t type() const { return type_; };
 
-    int32_t pos_1() { return pos_1_; }
+    int32_t pos_1() const { return pos_1_; }
 
  private:
     int32_t type_;

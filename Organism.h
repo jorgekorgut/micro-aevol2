@@ -38,6 +38,7 @@
 #include "RNA.h"
 #include "Protein.h"
 #include "Dna.h"
+#include "MutationEvent.h"
 
 class ExpManager;
 
@@ -47,24 +48,21 @@ class ExpManager;
 class Organism {
 
 public:
-    Organism(ExpManager *exp_m, int length, int indiv_id);
+    Organism(int length, Threefry::Gen &&rng);
 
-    /// Create an organism with a given genome
-    Organism(ExpManager *exp_m, char *genome, int indiv_id);
+    explicit Organism(const std::shared_ptr<Organism> &clone);
 
-    Organism(ExpManager *exp_m, const std::shared_ptr<Organism> &clone);
-
-    Organism(ExpManager *exp_m, gzFile backup_file);
+    explicit Organism(gzFile backup_file);
 
     ~Organism();
 
-    void save(gzFile backup_file);
+    void save(gzFile backup_file) const;
 
     void load(gzFile backup_file);
 
-    int length() { return dna_->length(); };
+    int length() const { return dna_->length(); };
 
-    void apply_mutations();
+    void apply_mutations(const std::list<MutationEvent *> &mutation_list);
 
     void reset_mutation_stats();
 
@@ -78,26 +76,16 @@ public:
     std::vector<RNA *> rnas;
     std::vector<Protein *> proteins;
 
-    double phenotype[300];
-    double delta[300];
+    double phenotype[300]{};
+    double delta[300]{};
 
-    double fitness;
-    double metaerror;
+    double fitness = 0.0;
+    double metaerror = 0.0;
 
-    Dna *dna_;
-    int parent_length_;
-
-    int indiv_id_;
-    int parent_id_;
+    Dna *dna_ = nullptr;
 
     int protein_count_ = 0;
     int rna_count_ = 0;
-
-    ExpManager *exp_m_;
-
-    int global_id = -1;
-
-    int usage_count_ = 1;
 
     // Stats
     int nb_genes_activ = 0;
