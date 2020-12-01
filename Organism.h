@@ -81,6 +81,8 @@ public:
 
     void locate_promoters();
 
+    void evaluate(const double* target);
+
 
     using ErrorType = int8_t;
     // Map position (int) to Promoter
@@ -112,8 +114,16 @@ public:
     int nb_swi_ = 0;
     int nb_mut_ = 0;
 
-//private:
+private:
+    // Evaluation
+    void compute_RNA();
+    void search_start_protein();
+    void compute_protein();
+    void translate_protein();
+    void compute_phenotype();
+    void compute_fitness(const double* target);
 
+    // Mutation
     bool do_switch(int pos);
 
     void remove_all_promoters();
@@ -160,6 +170,12 @@ public:
 
         return a;
         //return m >= 0 ? m % n : ( n - abs ( m%n ) ) % n;
+    }
+
+    int loop_back(int &position) const {
+        if (position > length())
+            position -= length();
+        return position;
     }
 };
 

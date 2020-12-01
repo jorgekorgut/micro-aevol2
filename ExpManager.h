@@ -64,29 +64,9 @@ public:
 
     void run_a_step();
 
-    void prepare_mutation(int indiv_id);
+    void prepare_mutation(int indiv_id) const;
 
     void selection(int indiv_id);
-
-    inline void apply_mutation(int indiv_id) {
-        internal_organisms_[indiv_id]->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
-    }
-
-    void start_stop_RNA(int indiv_id);
-
-    void compute_RNA(int indiv_id);
-
-    void opt_prom_compute_RNA(int indiv_id);
-
-    void start_protein(int indiv_id);
-
-    void compute_protein(int indiv_id);
-
-    void translate_protein(int indiv_id);
-
-    void compute_phenotype(int indiv_id);
-
-    void compute_fitness(int indiv_id);
 
     std::shared_ptr<Organism> *internal_organisms_;
     std::shared_ptr<Organism> *prev_internal_organisms_;

@@ -26,6 +26,7 @@
 
 
 
+#include <cmath>
 #include "Organism.h"
 
 using namespace std;
@@ -142,6 +143,452 @@ void Organism::compute_protein_stats() {
     }
 }
 
+/** LOOK **/
+void Organism::locate_promoters() {
+    look_for_new_promoters_starting_between(0, length());
+}
+
+/**
+ * Apply all the mutation events of the organism on its DNA
+ */
+void Organism::apply_mutations(const list<MutationEvent *> &mutation_list) {
+    for (const auto *mutation: mutation_list) {
+        switch (mutation->type()) {
+            case DO_SWITCH:
+                do_switch(mutation->pos_1());
+                nb_swi_++;
+                nb_mut_++;
+                break;
+        }
+    }
+}
+
+void Organism::evaluate(const double *target) {
+    compute_RNA();
+    search_start_protein();
+    compute_protein();
+    translate_protein();
+    compute_phenotype();
+    compute_fitness(target);
+}
+
+void Organism::compute_RNA() {
+    proteins.clear();
+    rnas.clear();
+    terminators.clear();
+
+    rnas.resize(promoters_.size());
+
+    for (const auto &prom_pair: promoters_) {
+        int prom_pos = prom_pair.first;
+
+        /* Search for terminators */
+        int cur_pos = prom_pos + PROM_SIZE;
+        loop_back(cur_pos);
+
+        int start_pos = cur_pos;
+
+        bool terminator_found = false;
+
+        while (!terminator_found) {
+            int term_dist_leading = dna_->terminator_at(cur_pos);
+
+            if (term_dist_leading == TERM_STEM_SIZE)
+                terminator_found = true;
+            else {
+                cur_pos++;
+                loop_back(cur_pos);
+
+                if (cur_pos == start_pos) {
+                    break;
+                }
+            }
+        }
+
+        if (terminator_found) {
+            int32_t rna_end = cur_pos + TERMINATOR_SIZE;
+            loop_back(rna_end);
+
+            int32_t rna_length;
+
+            if (start_pos > rna_end)
+                rna_length = (length() + rna_end) - start_pos;
+            else
+                rna_length = rna_end - start_pos;
+
+            if (rna_length > 0) {
+                int glob_rna_idx = rna_count_;
+                rna_count_ = rna_count_ + 1;
+
+                rnas[glob_rna_idx] = new RNA(
+                        prom_pos,
+                        rna_end,
+                        1.0 - std::fabs(((float) prom_pair.second)) / 5.0,
+                        rna_length);
+            }
+        }
+    }
+}
+
+void Organism::search_start_protein() {
+    for (int rna_idx = 0; rna_idx < rna_count_; rna_idx++) {
+        const auto &rna = rnas[rna_idx];
+        int c_pos = rna->begin;
+
+        if (rna->length >= PROM_SIZE) {
+            c_pos += PROM_SIZE;
+            loop_back(c_pos);
+
+            while (c_pos != rna->end) {
+                if (dna_->shine_dal_start(c_pos)) {
+                    rna->start_prot.push_back(c_pos);
+                }
+
+                c_pos++;
+                loop_back(c_pos);
+            }
+        }
+    }
+}
+
+void Organism::compute_protein() {
+    int resize_to = 0;
+
+    for (int rna_idx = 0; rna_idx < rna_count_; rna_idx++) {
+        resize_to += rnas[rna_idx]->start_prot.size();
+    }
+
+    proteins.resize(resize_to);
+
+    for (int rna_idx = 0; rna_idx < rna_count_; rna_idx++) {
+        auto* rna = rnas[rna_idx];
+        int transcribed_start = rna->begin + PROM_SIZE;
+        loop_back(transcribed_start);
+        for (int protein_idx = 0; protein_idx < rna->start_prot.size(); protein_idx++) {
+            int protein_start = rna->start_prot[protein_idx];
+            int current_position = protein_start + SD_TO_START;
+            loop_back(current_position);
+
+            int transcription_length;
+            if (transcribed_start <= protein_start) {
+                transcription_length = protein_start - transcribed_start;
+            } else {
+                transcription_length = length() - transcribed_start + protein_start;
+            }
+            transcription_length += SD_TO_START;
+
+
+            while (rna->length - transcription_length >= CODON_SIZE) {
+                if (dna_->protein_stop(current_position)) {
+                    int prot_length;
+
+                    int protein_end = current_position + CODON_SIZE;
+                    loop_back(protein_end);
+
+                    if (protein_start + SD_TO_START < protein_end) {
+                        prot_length = protein_end - (protein_start + SD_TO_START);
+                    } else {
+                        prot_length = (length() + protein_end) - (protein_start + SD_TO_START);
+                    }
+
+                    if (prot_length > CODON_SIZE) { // it has at least 2 codons, among them a STOP
+                        int glob_prot_idx = protein_count_;
+                        protein_count_ += 1;
+
+                        proteins[glob_prot_idx] =
+                                new Protein(protein_start,
+                                            protein_end,
+                                            prot_length,
+                                            rna->e);
+
+                        rna->is_coding_ = true;
+                    }
+                    break;
+                }
+
+                current_position += CODON_SIZE;
+                loop_back(current_position);
+                transcription_length += CODON_SIZE;
+            }
+        }
+    }
+}
+
+void Organism::translate_protein() {
+    for (int protein_idx = 0; protein_idx < protein_count_; protein_idx++) {
+        auto* protein = proteins[protein_idx];
+        if (protein->is_init_) {
+            int c_pos = protein->protein_start;
+            c_pos += SD_TO_START;
+            loop_back(c_pos);
+
+            int nb_codon = (protein->protein_length / 3) - 1; // Do not count the STOP codon
+            // Arbitrary limit to the number of codon in one gene
+            // It has black magic reasons
+            constexpr int FRACTION_SIZE = 52;
+            nb_codon = min(nb_codon, FRACTION_SIZE);
+            int codon_list[FRACTION_SIZE]{};
+
+            for (int codon_idx = 0; codon_idx < nb_codon; ++codon_idx) {
+                codon_list[codon_idx] = dna_->codon_at(c_pos);
+
+                c_pos += 3;
+                loop_back(c_pos);
+            }
+
+/** This part of the code translate a Gray code binary to standard
+ * It looks like black magic (again) but the ide of the implementation can be found hear:
+ * https://www.elprocus.com/code-converter-binary-to-gray-code-and-gray-code-to-binary-conversion/ **/
+            double M = 0.0;
+            double W = 0.0;
+            double H = 0.0;
+
+            int nb_m = 0;
+            int nb_w = 0;
+            int nb_h = 0;
+
+            bool bin_m = false; // Initializing to false will yield a conservation of the high weight bit
+            bool bin_w = false; // when applying the XOR operator for the Gray to standard conversion
+            bool bin_h = false;
+
+
+            for (int i = 0; i < nb_codon; i++) {
+                switch (codon_list[i]) {
+                    case CODON_M0 : {
+                        // M codon found
+                        nb_m++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_m ^= false; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest weight bit was found, make a left bitwise shift
+                        //~ M <<= 1;
+                        M *= 2;
+
+                        // Add this nucleotide's contribution to M
+                        if (bin_m) M += 1;
+
+                        break;
+                    }
+                    case CODON_M1 : {
+                        // M codon found
+                        nb_m++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_m ^= true; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest bit was found, make a left bitwise shift
+                        //~ M <<= 1;
+                        M *= 2;
+
+                        // Add this nucleotide's contribution to M
+                        if (bin_m) M += 1;
+
+                        break;
+                    }
+                    case CODON_W0 : {
+                        // W codon found
+                        nb_w++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_w ^= false; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest weight bit was found, make a left bitwise shift
+                        //~ W <<= 1;
+                        W *= 2;
+
+                        // Add this nucleotide's contribution to W
+                        if (bin_w) W += 1;
+
+                        break;
+                    }
+                    case CODON_W1 : {
+                        // W codon found
+                        nb_w++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_w ^= true; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest weight bit was found, make a left bitwise shift
+                        //~ W <<= 1;
+                        W *= 2;
+
+                        // Add this nucleotide's contribution to W
+                        if (bin_w) W += 1;
+
+                        break;
+                    }
+                    case CODON_H0 :
+                    case CODON_START : // Start codon codes for the same amino-acid as H0 codon
+                    {
+                        // H codon found
+                        nb_h++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_h ^= false; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest weight bit was found, make a left bitwise shift
+                        //~ H <<= 1;
+                        H *= 2;
+
+                        // Add this nucleotide's contribution to H
+                        if (bin_h) H += 1;
+
+                        break;
+                    }
+                    case CODON_H1 : {
+                        // H codon found
+                        nb_h++;
+
+                        // Convert Gray code to "standard" binary code
+                        bin_h ^= true; // as bin_m was initialized to false, the XOR will have no effect on the high weight bit
+
+                        // A lower-than-the-previous-lowest weight bit was found, make a left bitwise shift
+                        //~ H <<= 1;
+                        H *= 2;
+
+                        // Add this nucleotide's contribution to H
+                        if (bin_h) H += 1;
+
+                        break;
+                    }
+                }
+            }
+/// End of Black Magic
+
+            protein->protein_length = nb_codon;
+
+
+            //  ----------------------------------------------------------------------------------
+            //  2) Normalize M, W and H values in [0;1] according to number of codons of each kind
+            //  ----------------------------------------------------------------------------------
+            protein->m = nb_m != 0 ? M / (pow(2, nb_m) - 1) : 0.5;
+            protein->w = nb_w != 0 ? W / (pow(2, nb_w) - 1) : 0.0;
+            protein->h = nb_h != 0 ? H / (pow(2, nb_h) - 1) : 0.5;
+
+            //  ------------------------------------------------------------------------------------
+            //  3) Normalize M, W and H values according to the allowed ranges (defined in macros.h)
+            //  ------------------------------------------------------------------------------------
+            // x_min <= M <= x_max
+            // w_min <= W <= w_max
+            // h_min <= H <= h_max
+            protein->m = (X_MAX - X_MIN) * protein->m + X_MIN;
+            protein->w = (W_MAX - W_MIN) * protein->w + W_MIN;
+            protein->h = (H_MAX - H_MIN) * protein->h + H_MIN;
+
+            if (nb_m == 0 || nb_w == 0 || nb_h == 0 ||
+                protein->w == 0.0 ||
+                protein->h == 0.0) {
+                protein->is_functional = false;
+            } else {
+                protein->is_functional = true;
+            }
+        }
+    }
+
+
+    std::map<int, Protein *> lookup;
+
+    for (int protein_idx = 0; protein_idx < protein_count_; protein_idx++) {
+        auto* protein = proteins[protein_idx];
+        if (protein->is_init_) {
+            if (lookup.find(protein->protein_start) == lookup.end()) {
+                lookup[protein->protein_start] = protein;
+            } else {
+                lookup[protein->protein_start]->e += protein->e;
+                protein->is_init_ = false;
+            }
+        }
+    }
+}
+
+void Organism::compute_phenotype() {
+    double activ_phenotype[FUZZY_SAMPLING]{};
+    double inhib_phenotype[FUZZY_SAMPLING]{};
+
+    for (int protein_idx = 0; protein_idx < protein_count_; protein_idx++) {
+        const auto* protein = proteins[protein_idx];
+        if (protein->is_init_ && protein->is_functional) {
+            // Compute triangle points' coordinates
+            double x0 = protein->m - protein->w;
+            double x1 = protein->m;
+            double x2 = protein->m + protein->w;
+
+            int ix0 = (int) (x0 * FUZZY_SAMPLING);
+            int ix1 = (int) (x1 * FUZZY_SAMPLING);
+            int ix2 = (int) (x2 * FUZZY_SAMPLING);
+
+            if (ix0 < 0) ix0 = 0; else if (ix0 > (FUZZY_SAMPLING - 1)) ix0 = FUZZY_SAMPLING - 1;
+            if (ix1 < 0) ix1 = 0; else if (ix1 > (FUZZY_SAMPLING - 1)) ix1 = FUZZY_SAMPLING - 1;
+            if (ix2 < 0) ix2 = 0; else if (ix2 > (FUZZY_SAMPLING - 1)) ix2 = FUZZY_SAMPLING - 1;
+
+            // Compute the first equation of the triangle
+            double incY = (protein->h * protein->e) / (ix1 - ix0);
+            int count = 1;
+
+            // Updating value between x0 and x1
+            for (int i = ix0 + 1; i < ix1; i++) {
+                if (protein->h > 0)
+                    activ_phenotype[i] += (incY * (count++));
+                else
+                    inhib_phenotype[i] += (incY * (count++));
+            }
+
+            if (protein->h > 0)
+                activ_phenotype[ix1] += (protein->h * protein->e);
+            else
+                inhib_phenotype[ix1] += (protein->h * protein->e);
+
+
+            // Compute the second equation of the triangle
+            incY = (protein->h * protein->e) / (ix2 - ix1);
+            count = 1;
+
+            // Updating value between x1 and x2
+            for (int i = ix1 + 1; i < ix2; i++) {
+                if (protein->h > 0)
+                    activ_phenotype[i] += (protein->h * protein->e) - (incY * count++);
+                else
+                    inhib_phenotype[i] += (protein->h * protein->e) - (incY * count++);
+            }
+        }
+    }
+
+
+    for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx++) {
+        if (activ_phenotype[fuzzy_idx] > 1)
+            activ_phenotype[fuzzy_idx] = 1;
+        if (inhib_phenotype[fuzzy_idx] < -1)
+            inhib_phenotype[fuzzy_idx] = -1;
+    }
+
+    for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx++) {
+        phenotype[fuzzy_idx] = activ_phenotype[fuzzy_idx] + inhib_phenotype[fuzzy_idx];
+        if (phenotype[fuzzy_idx] < 0)
+            phenotype[fuzzy_idx] = 0;
+        if (phenotype[fuzzy_idx] > 1)
+            phenotype[fuzzy_idx] = 1;
+    }
+}
+
+void Organism::compute_fitness(const double *target) {
+    for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx++) {
+        delta[fuzzy_idx] = phenotype[fuzzy_idx] - target[fuzzy_idx];
+    }
+
+    metaerror = 0;
+
+    for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING - 1; fuzzy_idx++) {
+        // Computing a trapezoid area (A+B)*h/2 with:
+        //   base A as delta[fuzzy_idx]
+        //   base B as delta[fuzzy_idx + 1]
+        //   height h as 1/FUZZY_SAMPLING
+        metaerror += (std::fabs(delta[fuzzy_idx]) + std::fabs(delta[fuzzy_idx + 1])) / (2 * (double)FUZZY_SAMPLING);
+    }
+
+    fitness = exp(-SELECTION_PRESSURE * ((double) metaerror));
+}
+
 /**
  * Switch the DNA base-pair at a given position
  *
@@ -160,26 +607,6 @@ bool Organism::do_switch(int pos) {
 
     return true;
 }
-
-/**
- * Apply all the mutation events of the organism on its DNA
- */
-void Organism::apply_mutations(const list<MutationEvent *> &mutation_list) {
-    for (const auto *mutation: mutation_list) {
-        switch (mutation->type()) {
-            case DO_SWITCH:
-                do_switch(mutation->pos_1());
-                nb_swi_++;
-                nb_mut_++;
-                break;
-        }
-    }
-}
-
-/**
-Optimize promoters search
- **/
-
 
 void Organism::remove_promoters_around(int32_t pos) {
     if (dna_->length() >= PROM_SIZE) {
@@ -235,12 +662,6 @@ void Organism::remove_promoters_starting_after(int32_t pos) {
 void Organism::remove_promoters_starting_before(int32_t pos) {
     // suppression is in [0, pos[, pos is excluded
     promoters_.erase(promoters_.begin(), promoters_.upper_bound(pos - 1));
-}
-
-
-/** LOOK **/
-void Organism::locate_promoters() {
-    look_for_new_promoters_starting_between(0, dna_->length());
 }
 
 void Organism::add_new_promoter(int32_t position, int8_t error) {
