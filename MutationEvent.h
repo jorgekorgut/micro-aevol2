@@ -30,11 +30,10 @@
 #define RAEVOL_CUDA_MUTATIONEVENT_H
 
 #include <cstdint>
-#include <vector>
 
 enum MutationEventType {
-    DO_SWITCH           = 0,
-  NONE
+    DO_SWITCH = 0,
+    NONE
 };
 
 /**
@@ -43,23 +42,22 @@ enum MutationEventType {
 
 class MutationEvent {
 
- public:
+public:
     MutationEvent() = default;
+
     ~MutationEvent() = default;
 
     void switch_pos(int32_t pos);
-
 
     int32_t type() const { return type_; };
 
     int32_t pos_1() const { return pos_1_; }
 
- private:
+private:
     int32_t type_;
 
     int32_t pos_1_;
 };
-
 
 
 #endif //RAEVOL_CUDA_MUTATIONEVENT_H
