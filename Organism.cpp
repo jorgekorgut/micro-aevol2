@@ -27,7 +27,6 @@
 
 
 #include "Organism.h"
-#include "ExpManager.h"
 
 using namespace std;
 

@@ -13,8 +13,8 @@
 
 #include "Threefry.h"
 
+constexpr int8_t NB_BASE = 2;
 constexpr int8_t CODON_SIZE = 3;
-
 // promoter
 constexpr int8_t PROM_SIZE = 22;
 constexpr const char *PROM_SEQ = "0101011001110010010110";

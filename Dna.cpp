@@ -3,7 +3,6 @@
 //
 
 #include "Dna.h"
-#include "ExpManager.h"
 
 Dna::Dna(int length, Threefry::Gen &&rng) : seq_(length) {
     // Generate a random genome

@@ -25,8 +25,6 @@
 // ***************************************************************************************************************
 
 #include "DnaMutator.h"
-#include "ExpManager.h"
-#include "AeTime.h"
 
 /**
  * Constructor for DnaMutator class
