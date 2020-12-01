@@ -54,9 +54,9 @@ Stats::Stats(int generation, bool best_or_not) {
 
     if (generation_ == 0) {
         if (is_indiv_)
-            statfile_best_.open("stats/stats_simd_best.csv",std::ofstream::trunc);
+            statfile_best_.open("stats/stats_simd_best.csv", std::ofstream::trunc);
         else
-            statfile_mean_.open("stats/stats_simd_mean.csv",std::ofstream::trunc);
+            statfile_mean_.open("stats/stats_simd_mean.csv", std::ofstream::trunc);
 
         if (is_indiv_) {
             statfile_best_ << "Generation" << "," << "fitness" << "," << "metabolic_error" << "," <<
@@ -77,10 +77,10 @@ Stats::Stats(int generation, bool best_or_not) {
         std::ifstream tmp_best;
 
         if (is_indiv_) {
-            tmp_best.open("stats/stats_simd_best.csv",std::ifstream::in);
+            tmp_best.open("stats/stats_simd_best.csv", std::ifstream::in);
             statfile_best_.open("stats/stats_simd_best.csv.tmp", std::ofstream::trunc);
         } else {
-            tmp_mean.open("stats/stats_simd_mean.csv",std::ifstream::in);
+            tmp_mean.open("stats/stats_simd_mean.csv", std::ifstream::in);
             statfile_mean_.open("stats/stats_simd_mean.csv.tmp", std::ofstream::trunc);
         }
 
@@ -140,7 +140,7 @@ void Stats::compute_best(const std::shared_ptr<Organism> &best) {
     is_indiv_ = true;
 
     fitness_ = best->fitness;
-    metabolic_error_  = best->metaerror;
+    metabolic_error_ = best->metaerror;
 
     amount_of_dna_ = best->length();
 
@@ -171,12 +171,12 @@ void Stats::compute_average(const std::shared_ptr<Organism> *population, int pop
     mean_nb_non_coding_rnas_ = 0;
     mean_nb_functional_genes_ = 0;
     mean_nb_non_functional_genes_ = 0;
-    
+
     mean_nb_mut_ = 0;
     mean_nb_switch_ = 0;
-    
+
     for (int indiv_id = 0; indiv_id < pop_size_; indiv_id++) {
-        const auto& organism = population[indiv_id];
+        const auto &organism = population[indiv_id];
         mean_fitness_ += organism->fitness;
         mean_metabolic_error_ += organism->metaerror;
 
@@ -220,10 +220,10 @@ void Stats::write_best(const std::shared_ptr<Organism> &best) {
 
     if (is_indiv_ && is_computed_) {
         // Write best stats
-        statfile_best_<<generation_<<","<<fitness_<<","<<metabolic_error_<<","<<
-                      amount_of_dna_<<","<<nb_coding_rnas_<<","<<nb_non_coding_rnas_<<","<<
-                      nb_functional_genes_<<","<<nb_non_functional_genes_<<","<<nb_mut_
-                      <<","<<nb_switch_<<std::endl;
+        statfile_best_ << generation_ << "," << fitness_ << "," << metabolic_error_ << "," <<
+                       amount_of_dna_ << "," << nb_coding_rnas_ << "," << nb_non_coding_rnas_ << "," <<
+                       nb_functional_genes_ << "," << nb_non_functional_genes_ << "," << nb_mut_
+                       << "," << nb_switch_ << std::endl;
         statfile_best_.flush();
     }
 }
@@ -237,10 +237,10 @@ void Stats::write_average(const std::shared_ptr<Organism> *population, int popul
 
     if (!is_indiv_ && is_computed_) {
         // Write average stats
-        statfile_mean_<<generation_<<","<<mean_fitness_<<","<<mean_metabolic_error_<<","<<
-                      mean_amount_of_dna_<<","<<mean_nb_coding_rnas_<<","<<mean_nb_non_coding_rnas_<<","<<
-                      mean_nb_functional_genes_<<","<<mean_nb_non_functional_genes_<<","<<mean_nb_mut_
-                      <<","<<mean_nb_switch_<<std::endl;
+        statfile_mean_ << generation_ << "," << mean_fitness_ << "," << mean_metabolic_error_ << "," <<
+                       mean_amount_of_dna_ << "," << mean_nb_coding_rnas_ << "," << mean_nb_non_coding_rnas_ << "," <<
+                       mean_nb_functional_genes_ << "," << mean_nb_non_functional_genes_ << "," << mean_nb_mut_
+                       << "," << mean_nb_switch_ << std::endl;
         statfile_mean_.flush();
     }
 }

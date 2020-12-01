@@ -52,15 +52,14 @@ public:
     }
 
     void compute_best(const std::shared_ptr<Organism> &best);
+
     void compute_average(const std::shared_ptr<Organism> *population, int population_size);
 
     void write_best(const std::shared_ptr<Organism> &best);
+
     void write_average(const std::shared_ptr<Organism> *population, int population_size);
 
     void reinit(int generation);
-
-    bool is_indiv() { return is_indiv_; }
-
 
 protected:
     int generation_;
