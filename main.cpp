@@ -175,8 +175,6 @@ int main(int argc, char* argv[]) {
         if (seed == -1) seed = 566545665;
     }
 
-
-
     ExpManager *exp_manager;
     if (resume == -1) {
         exp_manager = new ExpManager(height, width, seed, mutation_rate, genome_size, backup_step);

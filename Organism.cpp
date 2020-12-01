@@ -217,7 +217,6 @@ void Organism::remove_all_promoters() {
     promoters_.clear();
 }
 
-/** LEADING promoters **/
 /** REMOVE **/
 void Organism::remove_promoters_starting_between(int32_t pos_1, int32_t pos_2) {
     if (pos_1 > pos_2) {
@@ -266,7 +265,7 @@ void Organism::look_for_new_promoters_starting_between(int32_t pos_1, int32_t po
     for (int32_t i = pos_1; i < pos_2; i++) {
         int8_t dist = dna_->promoter_at(i);
 
-        if (dist <= 4) { // dist takes the hamming distance of the sequence from the consensus
+        if (dist <= MAX_PROM_ERROR) { // dist takes the hamming distance of the sequence from the consensus
             add_new_promoter(i, dist);
         }
     }

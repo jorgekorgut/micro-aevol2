@@ -39,8 +39,6 @@
 #include "Dna.h"
 #include "MutationEvent.h"
 
-class ExpManager;
-
 /**
  * Class that implements an organism and its related DNAs, RNAs, Protein and Phenotype
  */

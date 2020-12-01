@@ -177,8 +177,6 @@ ExpManager::ExpManager(int time) {
  * Create stats and backup directory
  */
 void ExpManager::create_directory() {
-
-
     // Backup
     int status = mkdir("backup", 0755);
     if (status == -1 && errno != EEXIST) {
@@ -349,10 +347,7 @@ void ExpManager::prepare_mutation(int indiv_id) {
 ExpManager::~ExpManager() {
     delete stats_best;
     delete stats_mean;
-/*
-    for (auto i = 0; i < nb_indivs_; ++i) {
-        delete dna_mutator_array_[i];
-    }*/
+
     delete[] dna_mutator_array_;
 
     delete[] internal_organisms_;
@@ -969,6 +964,8 @@ void ExpManager::compute_phenotype(int indiv_id) {
         internal_organisms_[indiv_id]->phenotype[fuzzy_idx] = activ_phenotype[fuzzy_idx] + inhib_phenotype[fuzzy_idx];
         if (internal_organisms_[indiv_id]->phenotype[fuzzy_idx] < 0)
             internal_organisms_[indiv_id]->phenotype[fuzzy_idx] = 0;
+        if (internal_organisms_[indiv_id]->phenotype[fuzzy_idx] > 1)
+            internal_organisms_[indiv_id]->phenotype[fuzzy_idx] = 1;
     }
 }
 
@@ -980,11 +977,6 @@ void ExpManager::compute_phenotype(int indiv_id) {
  */
 void ExpManager::compute_fitness(int indiv_id) {
     for (int fuzzy_idx = 0; fuzzy_idx < 300; fuzzy_idx++) {
-        if (internal_organisms_[indiv_id]->phenotype[fuzzy_idx] > 1)
-            internal_organisms_[indiv_id]->phenotype[fuzzy_idx] = 1;
-        if (internal_organisms_[indiv_id]->phenotype[fuzzy_idx] < 0)
-            internal_organisms_[indiv_id]->phenotype[fuzzy_idx] = 0;
-
         internal_organisms_[indiv_id]->delta[fuzzy_idx] = internal_organisms_[indiv_id]->phenotype[fuzzy_idx] -
                                                           target[fuzzy_idx];
     }

@@ -43,7 +43,6 @@ public:
         e = t_e;
         length = t_length;
         is_coding_ = false;
-        // is_init_ = true;
     }
 
     int begin;
