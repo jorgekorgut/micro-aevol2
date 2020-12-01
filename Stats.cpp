@@ -54,7 +54,7 @@ Stats::Stats(ExpManager* exp_m, int generation, bool best_or_not) {
     nb_mut_ = 0;
     nb_switch_ = 0;
 
-    if (generation_==1) {
+    if (generation_ == 0) {
         if (is_indiv_)
             statfile_best_.open("stats/stats_simd_best.csv",std::ofstream::trunc);
         else

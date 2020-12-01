@@ -179,8 +179,7 @@ int main(int argc, char* argv[]) {
 
     ExpManager *exp_manager;
     if (resume == -1) {
-        exp_manager = new ExpManager(height, width, seed, mutation_rate, genome_size, 0.03, 1000,
-                                                 backup_step);
+        exp_manager = new ExpManager(height, width, seed, mutation_rate, genome_size, backup_step);
     } else {
         printf("Resuming...\n");
         exp_manager = new ExpManager(resume);

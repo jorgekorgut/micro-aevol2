@@ -35,9 +35,6 @@
 
 constexpr int8_t NB_BASE = 2;
 
-
-constexpr int PROM_SIZE = 22;
-
 constexpr int8_t CODON_START = 0b000;
 constexpr int8_t CODON_M0    = 0b100;
 constexpr int8_t CODON_M1    = 0b101;
@@ -53,6 +50,9 @@ constexpr double Y_MAX = 1.0;
 constexpr double H_MIN = -1.0;
 constexpr double H_MAX = 1.0;
 constexpr double W_MIN = 0.0;
+constexpr double W_MAX = 0.1;
+
+constexpr int SELECTION_PRESSURE = 1000;
 
 class Stats;
 
@@ -66,7 +66,7 @@ class ExpManager {
 
 public:
     ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
-               double w_max, int selection_pressure, int backup_step);
+               int backup_step);
 
     ExpManager(int time);
 
@@ -84,7 +84,7 @@ public:
     void run_evolution_on_gpu(int nb_gen);
 #endif
 
-    void run_a_step(double w_max, double selection_pressure, bool first_gen);
+    void run_a_step();
 
     void prepare_mutation(int indiv_id);
 
@@ -104,11 +104,11 @@ public:
 
     void compute_protein(int indiv_id);
 
-    void translate_protein(int indiv_id, double w_max);
+    void translate_protein(int indiv_id);
 
     void compute_phenotype(int indiv_id);
 
-    void compute_fitness(int indiv_id, double selection_pressure);
+    void compute_fitness(int indiv_id);
 
     std::shared_ptr<Organism> *internal_organisms_;
     std::shared_ptr<Organism> *prev_internal_organisms_;
@@ -124,8 +124,6 @@ public:
     double geometric_area_;
 
     double *target;
-
-    int selection_pressure_;
     //private:
     Stats *stats_best = nullptr;
     Stats *stats_mean = nullptr;
@@ -135,8 +133,6 @@ public:
     int grid_width_;
 
     double mutation_rate_;
-
-    double w_max_;
 
     int backup_step_;
 };
