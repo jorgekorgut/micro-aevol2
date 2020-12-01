@@ -33,14 +33,13 @@
 #include <limits>
 
 #include "Organism.h"
-#include "ExpManager.h"
 
 /**
  * Class to manage and generate the Stats (and the related file) of a simulation
  */
 class Stats {
 public:
-    Stats(ExpManager* exp_m, int generation, bool best_or_not);
+    Stats(int generation, bool best_or_not);
 
     ~Stats() {
         if (is_indiv_) {
@@ -52,11 +51,11 @@ public:
         }
     }
 
-    void compute_best();
-    void compute_average();
+    void compute_best(const std::shared_ptr<Organism> &best);
+    void compute_average(const std::shared_ptr<Organism> *population, int population_size);
 
-    void write_best();
-    void write_average();
+    void write_best(const std::shared_ptr<Organism> &best);
+    void write_average(const std::shared_ptr<Organism> *population, int population_size);
 
     void reinit(int generation);
 
@@ -64,8 +63,6 @@ public:
 
 
 protected:
-    ExpManager* exp_m_;
-
     int generation_;
 
     bool is_indiv_;

@@ -32,8 +32,7 @@
 #include "Threefry.h"
 #include "DnaMutator.h"
 #include "Organism.h"
-
-constexpr int8_t NB_BASE = 2;
+#include "Stats.h"
 
 constexpr int8_t CODON_START = 0b000;
 constexpr int8_t CODON_M0    = 0b100;
@@ -53,8 +52,6 @@ constexpr double W_MIN = 0.0;
 constexpr double W_MAX = 0.1;
 
 constexpr int SELECTION_PRESSURE = 1000;
-
-class Stats;
 
 /**
  * Main class of the simulator.

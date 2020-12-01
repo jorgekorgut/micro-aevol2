@@ -30,12 +30,10 @@
 /**
  * Create the data structure and open the file for the statistics of a simulation
  *
- * @param exp_m : the related ExpManager of the simulation
  * @param generation : Create statistics beginning from this generation (or resuming from this generation)
  * @param best_or_not : Statistics for the best organisms or mean of all the organisms
  */
-Stats::Stats(ExpManager* exp_m, int generation, bool best_or_not) {
-    exp_m_ = exp_m;
+Stats::Stats(int generation, bool best_or_not) {
     is_indiv_ = best_or_not;
     generation_ = generation;
 
@@ -138,23 +136,23 @@ Stats::Stats(ExpManager* exp_m, int generation, bool best_or_not) {
 /**
  * Compute the statistics for the best organism
  */
-void Stats::compute_best() {
+void Stats::compute_best(const std::shared_ptr<Organism> &best) {
     is_indiv_ = true;
 
-    fitness_ = exp_m_->best_indiv->fitness;
-    metabolic_error_  = exp_m_->best_indiv->metaerror;
+    fitness_ = best->fitness;
+    metabolic_error_  = best->metaerror;
 
-    amount_of_dna_ = exp_m_->best_indiv->length();
+    amount_of_dna_ = best->length();
 
-    nb_coding_rnas_ = exp_m_->best_indiv->nb_coding_RNAs;
-    nb_non_coding_rnas_ = exp_m_->best_indiv->nb_non_coding_RNAs;
+    nb_coding_rnas_ = best->nb_coding_RNAs;
+    nb_non_coding_rnas_ = best->nb_non_coding_RNAs;
 
-    nb_functional_genes_ = exp_m_->best_indiv->nb_func_genes;
-    nb_non_functional_genes_ = exp_m_->best_indiv->nb_non_func_genes;
+    nb_functional_genes_ = best->nb_func_genes;
+    nb_non_functional_genes_ = best->nb_non_func_genes;
 
 
-    nb_mut_ = exp_m_->best_indiv->nb_mut_;
-    nb_switch_ = exp_m_->best_indiv->nb_swi_;
+    nb_mut_ = best->nb_mut_;
+    nb_switch_ = best->nb_swi_;
 
     is_computed_ = true;
 }
@@ -162,9 +160,9 @@ void Stats::compute_best() {
 /**
  * Compute the statistics of the mean of the whole population
  */
-void Stats::compute_average() {
+void Stats::compute_average(const std::shared_ptr<Organism> *population, int population_size) {
     is_indiv_ = false;
-    pop_size_ = exp_m_->nb_indivs_;
+    pop_size_ = population_size;
 
     mean_fitness_ = 0;
     mean_metabolic_error_ = 0;
@@ -178,19 +176,20 @@ void Stats::compute_average() {
     mean_nb_switch_ = 0;
     
     for (int indiv_id = 0; indiv_id < pop_size_; indiv_id++) {
-        mean_fitness_ += exp_m_->prev_internal_organisms_[indiv_id]->fitness;
-        mean_metabolic_error_ += exp_m_->prev_internal_organisms_[indiv_id]->metaerror;
+        const auto& organism = population[indiv_id];
+        mean_fitness_ += organism->fitness;
+        mean_metabolic_error_ += organism->metaerror;
 
-        mean_amount_of_dna_ += exp_m_->prev_internal_organisms_[indiv_id]->length();
+        mean_amount_of_dna_ += organism->length();
 
-        mean_nb_coding_rnas_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_coding_RNAs;
-        mean_nb_non_coding_rnas_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_non_coding_RNAs;
+        mean_nb_coding_rnas_ += organism->nb_coding_RNAs;
+        mean_nb_non_coding_rnas_ += organism->nb_non_coding_RNAs;
 
-        mean_nb_functional_genes_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_func_genes;
-        mean_nb_non_functional_genes_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_non_func_genes;
+        mean_nb_functional_genes_ += organism->nb_func_genes;
+        mean_nb_non_functional_genes_ += organism->nb_non_func_genes;
 
-        mean_nb_mut_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_mut_;
-        mean_nb_switch_ += exp_m_->prev_internal_organisms_[indiv_id]->nb_swi_;
+        mean_nb_mut_ += organism->nb_mut_;
+        mean_nb_switch_ += organism->nb_swi_;
     }
 
 
@@ -215,9 +214,9 @@ void Stats::compute_average() {
 /**
  * Write the statistics of the best organism to the related statistics file
  */
-void Stats::write_best() {
+void Stats::write_best(const std::shared_ptr<Organism> &best) {
     if (is_indiv_ && !is_computed_)
-        compute_best();
+        compute_best(best);
 
     if (is_indiv_ && is_computed_) {
         // Write best stats
@@ -232,9 +231,9 @@ void Stats::write_best() {
 /**
  * Write the statistics of the mean of the population to the related statistics file
  */
-void Stats::write_average() {
+void Stats::write_average(const std::shared_ptr<Organism> *population, int population_size) {
     if (!is_indiv_ && !is_computed_)
-        compute_average();
+        compute_average(population, population_size);
 
     if (!is_indiv_ && is_computed_) {
         // Write average stats

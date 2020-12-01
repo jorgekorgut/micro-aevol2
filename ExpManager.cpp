@@ -49,7 +49,6 @@ using namespace std;
 #include "Protein.h"
 #include "Organism.h"
 #include "Gaussian.h"
-#include "Stats.h"
 
 #include <utility>
 
@@ -410,8 +409,8 @@ void ExpManager::run_a_step() {
             prev_internal_organisms_[indiv_id]->compute_protein_stats();
     }
 
-    stats_best->write_best();
-    stats_mean->write_average();
+    stats_best->write_best(best_indiv);
+    stats_mean->write_average(prev_internal_organisms_, nb_indivs_);
 
 }
 
@@ -1072,8 +1071,8 @@ void ExpManager::run_evolution(int nb_gen) {
     }
 
     // Stats
-    stats_best = new Stats(this, AeTime::time(), true);
-    stats_mean = new Stats(this, AeTime::time(), false);
+    stats_best = new Stats(AeTime::time(), true);
+    stats_mean = new Stats(AeTime::time(), false);
 
     printf("Running evolution from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
 
