@@ -42,58 +42,39 @@
 class DnaMutator {
 public:
 
-    DnaMutator(Threefry::Gen *mut_prng, int length,
-               double mutation_rate,
-               int indiv_id);
+    DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate);
 
     ~DnaMutator() {
         for (auto repl : mutation_list_) {
             delete repl;
         }
         mutation_list_.clear();
-
-        if (mut_prng_) delete mut_prng_;
+        delete mut_prng_;
     }
 
     void generate_mutations();
 
     MutationEvent *generate_next_mutation(int length);
 
-    bool mutation_available() { return (cpt_mut_ > 0); }
+    bool mutation_available() const { return (cpt_mut_ > 0); }
 
     std::list<MutationEvent *> mutation_list_;
 
-    bool hasMutate() { return hasMutate_; }
+    bool hasMutate() const { return hasMutate_; }
 
     void setMutate(bool mutate) { hasMutate_ = mutate; }
 
-    static int mod(int a, int b) {
-
-        assert(b > 0);
-
-        while (a < 0) a += b;
-        while (a >= b) a -= b;
-
-        return a;
-    }
-
-// private:
-    int id_;
+    // private:
     Threefry::Gen *mut_prng_;
     int length_;
 
     double mutation_rate_;
 
-
     //--------------------------- Mutation counters
-    int nb_swi_;
-    int nb_mut_;
+    int nb_swi_{};
+    int nb_mut_{};
 
-    int cpt_mut_;
-
-    int min_genome_length_ = 10;
-    int max_genome_length_ = 10000000;
-
+    int cpt_mut_{};
     bool hasMutate_ = false;
 };
 

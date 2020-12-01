@@ -330,7 +330,7 @@ void ExpManager::prepare_mutation(int indiv_id) {
     dna_mutator_array_[indiv_id] = new DnaMutator(
             rng,
             parent->length(),
-            mutation_rate_, indiv_id);
+            mutation_rate_);
     dna_mutator_array_[indiv_id]->generate_mutations();
 
     if (dna_mutator_array_[indiv_id]->hasMutate()) {
@@ -1056,7 +1056,7 @@ void ExpManager::selection(int indiv_id) {
 void ExpManager::run_evolution(int nb_gen) {
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         // dna_mutator_array_ is set only to have has_mutate() true so that RNA, protein and phenotype will be computed
-        dna_mutator_array_[indiv_id] = new DnaMutator(nullptr, 0, 0, indiv_id);
+        dna_mutator_array_[indiv_id] = new DnaMutator(nullptr, 0, 0);
         dna_mutator_array_[indiv_id]->setMutate(true);
 
         opt_prom_compute_RNA(indiv_id);

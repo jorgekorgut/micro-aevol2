@@ -34,16 +34,11 @@
  * @param mut_prng : PRNG to simulate the mutation
  * @param length  : Size of the DNA at the initialization
  * @param mutation_rate : Mutation rate of the organisms
- * @param indiv_id : Unique identification number for the Organism
  */
-DnaMutator::DnaMutator(Threefry::Gen* mut_prng,
-      int length,
-      double mutation_rate, int indiv_id) {
-  mut_prng_ = mut_prng;
-  length_ = length;
-  mutation_rate_ = mutation_rate;
-
-  id_ = indiv_id;
+DnaMutator::DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate) {
+    mut_prng_ = mut_prng;
+    length_ = length;
+    mutation_rate_ = mutation_rate;
 }
 
 /**
@@ -60,7 +55,7 @@ void DnaMutator::generate_mutations() {
             generate_next_mutation(length_);
         } while (mutation_available() > 0);
 
-        if(!mutation_list_.empty())
+        if (!mutation_list_.empty())
             hasMutate_ = true;
     }
 }
@@ -71,25 +66,25 @@ void DnaMutator::generate_mutations() {
  * @param length : Update size of the DNA of the Organism
  * @return The generated mutation event (or nullptr if none was created)
  */
-MutationEvent* DnaMutator::generate_next_mutation(int length) {
-  int random_value;
-  MutationEvent* mevent = nullptr;
+MutationEvent *DnaMutator::generate_next_mutation(int length) {
+    int random_value;
+    MutationEvent *mevent = nullptr;
 
-  if (cpt_mut_>0) {
-    random_value = mut_prng_->random(cpt_mut_);
-    cpt_mut_--;
+    if (cpt_mut_ > 0) {
+        random_value = mut_prng_->random(cpt_mut_);
+        cpt_mut_--;
 
-    if (random_value < nb_swi_) {
-      nb_swi_--;
+        if (random_value < nb_swi_) {
+            nb_swi_--;
 
-      int pos = mut_prng_->random(length);
+            int pos = mut_prng_->random(length);
 
-      mevent = new MutationEvent();
-      mevent->switch_pos(pos);
-      mutation_list_.push_back(mevent);
+            mevent = new MutationEvent();
+            mevent->switch_pos(pos);
+            mutation_list_.push_back(mevent);
 
+        }
     }
-  }
 
-  return mevent;
+    return mevent;
 };
