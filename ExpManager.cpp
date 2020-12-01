@@ -87,9 +87,9 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     auto *g2 = new Gaussian(-1.4, 0.5, 0.07);
     auto *g3 = new Gaussian(0.3, 0.8, 0.03);
 
-    target = new double[300];
-    for (int i = 0; i < 300; i++) {
-        double pt_i = ((double) i) / 300.0;
+    target = new double[FUZZY_SAMPLING];
+    for (int i = 0; i < FUZZY_SAMPLING; i++) {
+        double pt_i = ((double) i) / (double)FUZZY_SAMPLING;
 
         double tmp = g1->compute_y(pt_i);
         tmp += g2->compute_y(pt_i);
@@ -108,7 +108,7 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     geometric_area_ = 0;
 
 
-    for (int i = 0; i < 299; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
         geometric_area_ += ((fabs(target[i]) + fabs(target[i + 1])) / (600.0));
     }
 
@@ -155,12 +155,12 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
  * @param time : resume from this generation
  */
 ExpManager::ExpManager(int time) {
-    target = new double[300];
+    target = new double[FUZZY_SAMPLING];
 
     load(time);
 
     geometric_area_ = 0;
-    for (int i = 0; i < 299; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
         geometric_area_ += ((fabs(target[i]) + fabs(target[i + 1])) / (600.0));
     }
 
@@ -438,68 +438,66 @@ void ExpManager::start_stop_RNA(int indiv_id) {
  * Optimize version that do not need to search the whole Dna for promoters
  */
 void ExpManager::opt_prom_compute_RNA(int indiv_id) {
-    if (dna_mutator_array_[indiv_id]->hasMutate()) {
-        internal_organisms_[indiv_id]->proteins.clear();
-        internal_organisms_[indiv_id]->rnas.clear();
-        internal_organisms_[indiv_id]->terminators.clear();
+    internal_organisms_[indiv_id]->proteins.clear();
+    internal_organisms_[indiv_id]->rnas.clear();
+    internal_organisms_[indiv_id]->terminators.clear();
 
-        internal_organisms_[indiv_id]->rnas.resize(
-                internal_organisms_[indiv_id]->promoters_.size());
+    internal_organisms_[indiv_id]->rnas.resize(
+            internal_organisms_[indiv_id]->promoters_.size());
 
-        for (const auto &prom_pair: internal_organisms_[indiv_id]->promoters_) {
-            int prom_pos = prom_pair.first;
+    for (const auto &prom_pair: internal_organisms_[indiv_id]->promoters_) {
+        int prom_pos = prom_pair.first;
 
-            /* Search for terminators */
-            int cur_pos = prom_pos + 22;
-            cur_pos = cur_pos >= internal_organisms_[indiv_id]->length()
-                      ? cur_pos - internal_organisms_[indiv_id]->length()
-                      : cur_pos;
+        /* Search for terminators */
+        int cur_pos = prom_pos + PROM_SIZE;
+        cur_pos = cur_pos >= internal_organisms_[indiv_id]->length()
+                  ? cur_pos - internal_organisms_[indiv_id]->length()
+                  : cur_pos;
 
-            int start_pos = cur_pos;
+        int start_pos = cur_pos;
 
-            bool terminator_found = false;
+        bool terminator_found = false;
 
-            while (!terminator_found) {
-                int term_dist_leading = internal_organisms_[indiv_id]->dna_->terminator_at(cur_pos);
+        while (!terminator_found) {
+            int term_dist_leading = internal_organisms_[indiv_id]->dna_->terminator_at(cur_pos);
 
-                if (term_dist_leading == 4)
-                    terminator_found = true;
-                else {
-                    cur_pos = cur_pos + 1 >= internal_organisms_[indiv_id]->length()
-                              ? cur_pos + 1 - internal_organisms_[indiv_id]->length()
-                              : cur_pos + 1;
+            if (term_dist_leading == 4)
+                terminator_found = true;
+            else {
+                cur_pos = cur_pos + 1 >= internal_organisms_[indiv_id]->length()
+                          ? cur_pos + 1 - internal_organisms_[indiv_id]->length()
+                          : cur_pos + 1;
 
-                    if (cur_pos == start_pos) {
-                        break;
-                    }
+                if (cur_pos == start_pos) {
+                    break;
                 }
             }
+        }
 
-            if (terminator_found) {
-                int32_t rna_end = cur_pos + 10 >= internal_organisms_[indiv_id]->length()
-                                  ? cur_pos + 10 - internal_organisms_[indiv_id]->length()
-                                  : cur_pos + 10;
+        if (terminator_found) {
+            int32_t rna_end = cur_pos + TERMINATOR_SIZE >= internal_organisms_[indiv_id]->length()
+                              ? cur_pos + TERMINATOR_SIZE - internal_organisms_[indiv_id]->length()
+                              : cur_pos + TERMINATOR_SIZE;
 
-                int32_t rna_length = 0;
+            int32_t rna_length = 0;
 
-                if (prom_pos > rna_end)
-                    rna_length = internal_organisms_[indiv_id]->length() - prom_pos + rna_end;
-                else
-                    rna_length = rna_end - prom_pos;
+            if (prom_pos > rna_end)
+                rna_length = internal_organisms_[indiv_id]->length() - prom_pos + rna_end;
+            else
+                rna_length = rna_end - prom_pos;
 
-                rna_length -= 21;
+            rna_length -= 21;
 
-                if (rna_length > 0) {
-                    int glob_rna_idx = internal_organisms_[indiv_id]->rna_count_;
-                    internal_organisms_[indiv_id]->rna_count_ = internal_organisms_[indiv_id]->rna_count_ + 1;
+            if (rna_length > 0) {
+                int glob_rna_idx = internal_organisms_[indiv_id]->rna_count_;
+                internal_organisms_[indiv_id]->rna_count_ = internal_organisms_[indiv_id]->rna_count_ + 1;
 
-                    internal_organisms_[indiv_id]->rnas[glob_rna_idx] = new RNA(
-                            prom_pos,
-                            rna_end,
-                            1.0 - std::fabs(
-                                    ((float) prom_pair.second)) / 5.0,
-                            rna_length);
-                }
+                internal_organisms_[indiv_id]->rnas[glob_rna_idx] = new RNA(
+                        prom_pos,
+                        rna_end,
+                        1.0 - std::fabs(
+                                ((float) prom_pair.second)) / 5.0,
+                        rna_length);
             }
         }
     }
@@ -685,11 +683,9 @@ void ExpManager::translate_protein(int indiv_id) {
             int codon_idx = 0;
             int count_loop = 0;
 
-            //printf("Codon list : ");
             while (count_loop < internal_organisms_[indiv_id]->proteins[protein_idx]->protein_length / 3 &&
                    codon_idx < 64) {
                 codon_list[codon_idx] = internal_organisms_[indiv_id]->dna_->codon_at(c_pos);
-                //printf("%d ",codon_list[codon_idx]);
                 codon_idx++;
 
                 count_loop++;
@@ -698,7 +694,6 @@ void ExpManager::translate_protein(int indiv_id) {
                         ? c_pos - internal_organisms_[indiv_id]->length()
                         : c_pos;
             }
-            //printf("\n");
 
             double M = 0.0;
             double W = 0.0;

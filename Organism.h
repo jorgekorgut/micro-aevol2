@@ -33,11 +33,25 @@
 #include <set>
 #include <zlib.h>
 #include <list>
+#include <cstdint>
 
 #include "RNA.h"
 #include "Protein.h"
 #include "Dna.h"
 #include "MutationEvent.h"
+
+// Protein / Fuzzy space
+constexpr double X_MIN = 0.0;
+constexpr double X_MAX = 1.0;
+constexpr double Y_MIN = 0.0;
+constexpr double Y_MAX = 1.0;
+constexpr double H_MIN = -1.0;
+constexpr double H_MAX = 1.0;
+constexpr double W_MIN = 0.0;
+constexpr double W_MAX = 0.1;
+
+constexpr int FUZZY_SAMPLING = 300;
+constexpr int SELECTION_PRESSURE = 1000;
 
 /**
  * Class that implements an organism and its related DNAs, RNAs, Protein and Phenotype
@@ -64,6 +78,8 @@ public:
     void reset_mutation_stats();
 
     void compute_protein_stats();
+
+    void locate_promoters();
 
 
     using ErrorType = int8_t;
@@ -111,8 +127,6 @@ public:
     void remove_promoters_starting_after(int32_t pos);
 
     void remove_promoters_starting_before(int32_t pos);
-
-    void locate_promoters();
 
     void look_for_new_promoters_around(int32_t pos_1, int32_t pos_2);
 

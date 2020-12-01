@@ -4,6 +4,8 @@
 
 #include "Dna.h"
 
+#include <cassert>
+
 Dna::Dna(int length, Threefry::Gen &&rng) : seq_(length) {
     // Generate a random genome
     for (int32_t i = 0; i < length; i++) {

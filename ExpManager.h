@@ -34,25 +34,6 @@
 #include "Organism.h"
 #include "Stats.h"
 
-constexpr int8_t CODON_START = 0b000;
-constexpr int8_t CODON_M0    = 0b100;
-constexpr int8_t CODON_M1    = 0b101;
-constexpr int8_t CODON_W0    = 0b010;
-constexpr int8_t CODON_W1    = 0b011;
-constexpr int8_t CODON_H0    = 0b110;
-constexpr int8_t CODON_H1    = 0b111;
-
-constexpr double X_MIN = 0.0;
-constexpr double X_MAX = 1.0;
-constexpr double Y_MIN = 0.0;
-constexpr double Y_MAX = 1.0;
-constexpr double H_MIN = -1.0;
-constexpr double H_MAX = 1.0;
-constexpr double W_MIN = 0.0;
-constexpr double W_MAX = 0.1;
-
-constexpr int SELECTION_PRESSURE = 1000;
-
 /**
  * Main class of the simulator.
  * ExpManager is in charge of running the simulation and maintaining all the data.
@@ -65,7 +46,7 @@ public:
     ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
                int backup_step);
 
-    ExpManager(int time);
+    explicit ExpManager(int time);
 
     ~ExpManager();
 
