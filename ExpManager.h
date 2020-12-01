@@ -66,7 +66,7 @@ public:
 
     void prepare_mutation(int indiv_id) const;
 
-    void selection(int indiv_id);
+    void selection(int indiv_id) const;
 
     std::shared_ptr<Organism> *internal_organisms_;
     std::shared_ptr<Organism> *prev_internal_organisms_;
@@ -79,13 +79,10 @@ public:
 
     std::unique_ptr<Threefry> rng_;
 
-    double geometric_area_;
-
     double *target;
     //private:
     Stats *stats_best = nullptr;
     Stats *stats_mean = nullptr;
-
 
     int grid_height_;
     int grid_width_;

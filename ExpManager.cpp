@@ -26,14 +26,12 @@
 // ***************************************************************************************************************
 
 
-#include <cmath>
-#include <map>
 #include <sys/stat.h>
 #include <err.h>
-#include <chrono>
 #include <iostream>
 
 #ifdef USE_CUDA
+#include <chrono>
 #include "nvToolsExt.h"
 #include <cuda_profiler_api.h>
 using namespace std::chrono;
@@ -45,12 +43,7 @@ using namespace std;
 
 #include "ExpManager.h"
 #include "AeTime.h"
-#include "RNA.h"
-#include "Protein.h"
-#include "Organism.h"
 #include "Gaussian.h"
-
-#include <utility>
 
 /**
  * Constructor for initializing a new simulation
@@ -89,7 +82,7 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
 
     target = new double[FUZZY_SAMPLING];
     for (int i = 0; i < FUZZY_SAMPLING; i++) {
-        double pt_i = ((double) i) / (double)FUZZY_SAMPLING;
+        double pt_i = ((double) i) / (double) FUZZY_SAMPLING;
 
         double tmp = g1->compute_y(pt_i);
         tmp += g2->compute_y(pt_i);
@@ -105,15 +98,13 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     delete g2;
     delete g3;
 
-    geometric_area_ = 0;
-
-
+    double geometric_area = 0;
     for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
         // Computing a trapezoid area
-        geometric_area_ += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double)FUZZY_SAMPLING));
+        geometric_area += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double) FUZZY_SAMPLING));
     }
 
-    printf("Initialized environmental target %f\n", geometric_area_);
+    printf("Initialized environmental target %f\n", geometric_area);
 
 
     // Initializing the PRNGs
@@ -130,7 +121,7 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
         random_organism->evaluate(target);
         internal_organisms_[0] = random_organism;
 
-        r_compare = round((random_organism->metaerror - geometric_area_) * 1E10) / 1E10;
+        r_compare = round((random_organism->metaerror - geometric_area) * 1E10) / 1E10;
     }
 
     printf("Populating the environment\n");
@@ -155,12 +146,13 @@ ExpManager::ExpManager(int time) {
 
     load(time);
 
-    geometric_area_ = 0;
+    double geometric_area = 0;
     for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
-        geometric_area_ += ((fabs(target[i]) + fabs(target[i + 1])) / (600.0));
+        // Computing a trapezoid area
+        geometric_area += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double) FUZZY_SAMPLING));
     }
 
-    printf("Initialized environmental target %f\n", geometric_area_);
+    printf("Initialized environmental target %f\n", geometric_area);
 
     dna_mutator_array_ = new DnaMutator *[nb_indivs_];
     for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id) {
@@ -227,7 +219,7 @@ void ExpManager::save(int t) {
 
     gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
 
-    for (int i = 0; i < 300; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING; i++) {
         double tmp = target[i];
         gzwrite(exp_backup_file, &tmp, sizeof(tmp));
     }
@@ -293,7 +285,7 @@ void ExpManager::load(int t) {
 
     gzread(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
 
-    for (int i = 0; i < 300; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING; i++) {
         double tmp;
         gzread(exp_backup_file, &tmp, sizeof(tmp));
         target[i] = tmp;
@@ -333,7 +325,7 @@ ExpManager::~ExpManager() {
  *
   * @param indiv_id : Unique identification number of the cell
  */
-void ExpManager::selection(int indiv_id) {
+void ExpManager::selection(int indiv_id) const {
     int8_t selection_scope_x = 3;
     int8_t selection_scope_y = 3;
     int8_t neighborhood_size = 9;
@@ -410,13 +402,13 @@ void ExpManager::run_a_step() {
         prepare_mutation(indiv_id);
 
         if (dna_mutator_array_[indiv_id]->hasMutate()) {
-            auto& mutant = internal_organisms_[indiv_id];
+            auto &mutant = internal_organisms_[indiv_id];
             mutant->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
             mutant->evaluate(target);
         }
     }
 
-
+    // Swap Population
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id];
         internal_organisms_[indiv_id] = nullptr;
@@ -457,8 +449,6 @@ void ExpManager::run_evolution(int nb_gen) {
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         prev_internal_organisms_[indiv_id]->evaluate(target);
         prev_internal_organisms_[indiv_id]->compute_protein_stats();
-
-        delete dna_mutator_array_[indiv_id];
     }
 
     // Stats
