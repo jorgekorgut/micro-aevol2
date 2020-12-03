@@ -26,18 +26,7 @@
 // ***************************************************************************************************************
 
 
-#include <sys/stat.h>
-#include <err.h>
 #include <iostream>
-
-#ifdef USE_CUDA
-#include <chrono>
-#include "nvToolsExt.h"
-#include <cuda_profiler_api.h>
-using namespace std::chrono;
-
-#include "Algorithms.h"
-#endif
 
 using namespace std;
 
@@ -159,23 +148,6 @@ ExpManager::ExpManager(int time) {
         dna_mutator_array_[indiv_id] = nullptr;
     }
 
-}
-
-/**
- * Create stats and backup directory
- */
-void ExpManager::create_directory() {
-    // Backup
-    int status = mkdir("backup", 0755);
-    if (status == -1 && errno != EEXIST) {
-        err(EXIT_FAILURE, "backup");
-    }
-
-    // Stats
-    status = mkdir("stats", 0755);
-    if (status == -1 && errno != EEXIST) {
-        err(EXIT_FAILURE, "stats");
-    }
 }
 
 /**
@@ -475,35 +447,3 @@ void ExpManager::run_evolution(int nb_gen) {
         }
     }
 }
-
-#ifdef USE_CUDA
-void ExpManager::run_evolution_on_gpu(int nb_gen) {
-  cudaProfilerStart();
-  high_resolution_clock::time_point t1 = high_resolution_clock::now();
-  cout << "Transfer" << endl;
-  transfer_in(this, true);
-  high_resolution_clock::time_point t2 = high_resolution_clock::now();
-  auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-  cout << "Transfer done in " << duration_transfer_in << endl;
-
-  printf("Running evolution GPU from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
-  bool firstGen = true;
-  for (int gen = 0; gen < nb_gen+1; gen++) {
-    if(gen == 91) nvtxRangePushA("generation 91 to 100");
-    AeTime::plusplus();
-
-      high_resolution_clock::time_point t1 = high_resolution_clock::now();
-      run_a_step_on_GPU(nb_indivs_, w_max_, selection_pressure_, grid_width_, grid_height_,mutation_rate_);
-
-      t2 = high_resolution_clock::now();
-      auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-
-      std::cout<<"LOG,"<<duration_transfer_in<<std::endl;
-
-    firstGen = false;
-    if(gen == 100) nvtxRangePop();
-    printf("Generation %d : \n",AeTime::time());
-  }
-  cudaProfilerStop();
-}
-#endif

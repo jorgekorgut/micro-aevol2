@@ -31,6 +31,7 @@
 #include <cstring>
 
 #include "ExpManager.h"
+#include "Abstract_ExpManager.h"
 
 void print_help(char* prog_path) {
     // Get the program file-name in prog_name (strip prog_path of the path)
@@ -156,6 +157,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
+#ifdef USE_CUDA
+    printf("Activate CUDA\n");
+#endif
+
     printf("Start ExpManager\n");
 
     if (resume >= 0) {
@@ -175,20 +180,21 @@ int main(int argc, char* argv[]) {
         if (seed == -1) seed = 566545665;
     }
 
-    ExpManager *exp_manager;
+    Abstract_ExpManager *exp_manager;
     if (resume == -1) {
+#ifdef USE_CUDA
+#else
         exp_manager = new ExpManager(height, width, seed, mutation_rate, genome_size, backup_step);
+#endif
     } else {
         printf("Resuming...\n");
+#ifdef USE_CUDA
+#else
         exp_manager = new ExpManager(resume);
+#endif
     }
 
-#ifdef USE_CUDA
-    printf("Activate CUDA\n");
-    exp_manager->run_evolution_on_gpu(nbstep);
-#else
     exp_manager->run_evolution(nbstep);
-#endif
 
     delete exp_manager;
 

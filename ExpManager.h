@@ -28,6 +28,7 @@
 
 #include <memory>
 
+#include "Abstract_ExpManager.h"
 #include "Threefry.h"
 #include "DnaMutator.h"
 #include "Organism.h"
@@ -38,7 +39,7 @@
  * ExpManager is in charge of running the simulation and maintaining all the data.
  * It is also that class that implements checkpointing and restore mechanisms.
  */
-class ExpManager {
+class ExpManager : public Abstract_ExpManager {
 
 
 public:
@@ -47,19 +48,13 @@ public:
 
     explicit ExpManager(int time);
 
-    ~ExpManager();
+    ~ExpManager() override;
 
-    static void create_directory();
+    void save(int t) final;
 
-    void save(int t);
+    void load(int t) final;
 
-    void load(int t);
-
-    void run_evolution(int nb_gen);
-
-#ifdef USE_CUDA
-    void run_evolution_on_gpu(int nb_gen);
-#endif
+    void run_evolution(int nb_gen) override;
 
 private:
     void run_a_step();

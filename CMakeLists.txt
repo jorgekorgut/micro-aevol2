@@ -22,6 +22,7 @@ endif ( USE_OMP )
 find_package(ZLIB REQUIRED)
 
 add_library(micro_aevol
+        Abstract_ExpManager.cpp
         ExpManager.cpp
         AeTime.cpp
         DnaMutator.cpp
