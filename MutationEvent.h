@@ -24,10 +24,7 @@
 //
 // ***************************************************************************************************************
 
-
-
-#ifndef RAEVOL_CUDA_MUTATIONEVENT_H
-#define RAEVOL_CUDA_MUTATIONEVENT_H
+#pragma once
 
 #include <cstdint>
 
@@ -58,6 +55,3 @@ private:
 
     int32_t pos_1_;
 };
-
-
-#endif //RAEVOL_CUDA_MUTATIONEVENT_H

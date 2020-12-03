@@ -24,13 +24,11 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef PDC_MINI_AEVOL_STATS_H
-#define PDC_MINI_AEVOL_STATS_H
+#pragma once
 
 #include <cstdint>
 #include <fstream>
-#include <limits>
+#include <memory>
 
 #include "Organism.h"
 
@@ -97,6 +95,3 @@ protected:
     std::ofstream statfile_best_;
     std::ofstream statfile_mean_;
 };
-
-
-#endif //PDC_MINI_AEVOL_STATS_H

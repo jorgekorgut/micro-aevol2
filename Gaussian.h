@@ -24,9 +24,7 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef PDC_MINI_AEVOL_GAUSSIAN_H
-#define PDC_MINI_AEVOL_GAUSSIAN_H
+#pragma once
 
 #include <cmath>
 
@@ -42,6 +40,3 @@ public :
     double mean_;
     double width_; // In fact half-width to the inflexion points
 };
-
-
-#endif //PDC_MINI_AEVOL_GAUSSIAN_H

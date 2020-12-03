@@ -24,9 +24,7 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef PDC_MINI_AEVOL_ORGANISM_H
-#define PDC_MINI_AEVOL_ORGANISM_H
+#pragma once
 
 #include <map>
 #include <memory>
@@ -150,7 +148,7 @@ private:
 
     void add_new_promoter(int32_t position, int8_t error);
 
-    inline int32_t mod(int32_t a, int32_t b) {
+    static inline int32_t mod(int32_t a, int32_t b) {
 
         assert(b > 0);
 
@@ -161,7 +159,7 @@ private:
         //return m >= 0 ? m % n : ( n - abs ( m%n ) ) % n;
     }
 
-    inline int64_t mod(int64_t a, int64_t b) {
+    static inline int64_t mod(int64_t a, int64_t b) {
 
         assert(b > 0);
 
@@ -178,6 +176,3 @@ private:
         return position;
     }
 };
-
-
-#endif //PDC_MINI_AEVOL_ORGANISM_H

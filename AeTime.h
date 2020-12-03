@@ -24,10 +24,7 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef PDC_MINI_AEVOL_AETIME_H
-#define PDC_MINI_AEVOL_AETIME_H
-
+#pragma once
 
 class AeTime {
 public :
@@ -76,6 +73,3 @@ protected :
     // =================================================================
     static int time_;
 };
-
-
-#endif //PDC_MINI_AEVOL_AETIME_H

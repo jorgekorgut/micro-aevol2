@@ -24,10 +24,9 @@
 //
 // ***************************************************************************************************************
 
+#pragma once
 
-#ifndef PDC_MINI_AEVOL_EXPMANAGER_H
-#define PDC_MINI_AEVOL_EXPMANAGER_H
-
+#include <memory>
 
 #include "Threefry.h"
 #include "DnaMutator.h"
@@ -62,6 +61,7 @@ public:
     void run_evolution_on_gpu(int nb_gen);
 #endif
 
+private:
     void run_a_step();
 
     void prepare_mutation(int indiv_id) const;
@@ -80,7 +80,7 @@ public:
     std::unique_ptr<Threefry> rng_;
 
     double *target;
-    //private:
+
     Stats *stats_best = nullptr;
     Stats *stats_mean = nullptr;
 
@@ -91,6 +91,3 @@ public:
 
     int backup_step_;
 };
-
-
-#endif //PDC_MINI_AEVOL_EXPMANAGER_H

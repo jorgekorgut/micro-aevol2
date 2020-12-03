@@ -24,9 +24,7 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef PDC_MINI_AEVOL_RNA_H
-#define PDC_MINI_AEVOL_RNA_H
+#pragma once
 
 #include <vector>
 
@@ -35,7 +33,7 @@
  */
 class RNA {
 public:
-    RNA() {};
+    RNA() = delete;
 
     RNA(int t_begin, int t_end, double t_e, int t_length) {
         begin = t_begin;
@@ -53,5 +51,3 @@ public:
     int length;
     bool is_coding_;
 };
-
-#endif //PDC_MINI_AEVOL_RNA_H

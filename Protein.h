@@ -24,8 +24,7 @@
 //
 // ***************************************************************************************************************
 
-#ifndef PDC_MINI_AEVOL_PROTEIN_H
-#define PDC_MINI_AEVOL_PROTEIN_H
+#pragma once
 
 /**
  * Class to store a protein and its related variable
@@ -53,5 +52,3 @@ public:
 
     bool is_init_ = false;
 };
-
-#endif //PDC_MINI_AEVOL_PROTEIN_H

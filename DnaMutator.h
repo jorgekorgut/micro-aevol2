@@ -24,12 +24,9 @@
 //
 // ***************************************************************************************************************
 
-
-#ifndef RAEVOL_CUDA_DNAMUTATOR_H
-#define RAEVOL_CUDA_DNAMUTATOR_H
+#pragma once
 
 #include <list>
-#include <vector>
 
 #include "Organism.h"
 #include "Threefry.h"
@@ -78,5 +75,3 @@ public:
     bool hasMutate_ = false;
 };
 
-
-#endif //RAEVOL_CUDA_DNAMUTATOR_H
