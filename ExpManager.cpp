@@ -47,7 +47,7 @@ using namespace std;
  */
 ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
                        int backup_step)
-        : rng_(new Threefry(grid_width, grid_height, seed)) {
+        : seed_(seed), rng_(new Threefry(grid_width, grid_height, seed)) {
     // Initializing the data structure
     grid_height_ = grid_height;
     grid_width_ = grid_width;
@@ -185,8 +185,6 @@ void ExpManager::save(int t) {
     gzwrite(exp_backup_file, &grid_height_, sizeof(grid_height_));
     gzwrite(exp_backup_file, &grid_width_, sizeof(grid_width_));
 
-    gzwrite(exp_backup_file, &nb_indivs_, sizeof(nb_indivs_));
-
     gzwrite(exp_backup_file, &backup_step_, sizeof(backup_step_));
 
     gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
@@ -245,7 +243,7 @@ void ExpManager::load(int t) {
 
     gzread(exp_backup_file, &grid_width_, sizeof(grid_width_));
 
-    gzread(exp_backup_file, &nb_indivs_, sizeof(nb_indivs_));
+    nb_indivs_ = grid_height_ * grid_width_;
 
     internal_organisms_ = new std::shared_ptr<Organism>[nb_indivs_];
     prev_internal_organisms_ = new std::shared_ptr<Organism>[nb_indivs_];

@@ -72,6 +72,7 @@ private:
 
     int nb_indivs_;
 
+    int seed_;
     std::unique_ptr<Threefry> rng_;
 
     double *target;
