@@ -7,9 +7,9 @@
 #include <cstdint>
 
 #include "aevol_constants.h"
-#include "Protein_CUDA.cuh"
+#include "cuProtein.cuh"
 
-struct Gene {
+struct cuGene {
     uint8_t concentration;
     // position at which translation will start, after the START
     uint start;
@@ -17,16 +17,16 @@ struct Gene {
     uint length_limit;
 };
 
-struct RNA {
+struct cuRNA {
     uint8_t errors;
     uint start_transcription;
     uint transcription_length;
 
     uint nb_gene;
-    Gene *list_gene;
+    cuGene *list_gene;
 };
 
-struct Individual_CUDA {
+struct cuIndividual {
     __device__ void evaluate();
 
     __device__ void prepare_rnas();
@@ -69,9 +69,9 @@ struct Individual_CUDA {
     uint *prot_start;
 
     uint nb_rnas;
-    RNA *list_rnas;
+    cuRNA *list_rnas;
 
     uint nb_gene;
-    Gene *list_gene;
-    Protein *list_protein;
+    cuGene *list_gene;
+    cuProtein *list_protein;
 };

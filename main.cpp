@@ -31,7 +31,7 @@
 #include <cstring>
 
 #ifdef USE_CUDA
-#include "cuda/ExpManager_CUDA.h"
+#include "cuda/cuExpManager.h"
 #endif
 #include "Abstract_ExpManager.h"
 #include "ExpManager.h"
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
 #ifdef USE_CUDA
     // Not very clean but the goal is to re-use the initialization on the host to transfer data to device
     auto* tmp = dynamic_cast<ExpManager *>(exp_manager);
-    exp_manager = new ExpManager_CUDA(tmp);
+    exp_manager = new cuExpManager(tmp);
 #endif
 
     exp_manager->run_evolution(nbstep);

@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-struct Protein {
+struct cuProtein {
   uint wmh[3];    // { Width, Mean, Height }
   uint wmh_nb[3];
 

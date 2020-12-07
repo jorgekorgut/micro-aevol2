@@ -2,7 +2,7 @@
 // Created by elturpin on 26/11/2020.
 //
 
-#include "Protein_CUDA.cuh"
+#include "cuProtein.cuh"
 #include "aevol_constants.h"
 
 #include <cassert>
@@ -16,7 +16,7 @@
 // CODON_H0    = 0b110; 6
 // CODON_H1    = 0b111; 7
 
-__device__ void Protein::add_codon(uint8_t codon) {
+__device__ void cuProtein::add_codon(uint8_t codon) {
     assert(codon != 1);
     auto get_codon_type = [](uint8_t codon) -> uint8_t {
         codon = codon >> 1;
@@ -37,7 +37,7 @@ __device__ void Protein::add_codon(uint8_t codon) {
     parameter += previous_value ^ gray_bit_value;
 }
 
-__device__ void Protein::normalize() {
+__device__ void cuProtein::normalize() {
     // normalize to x_double = x_int / (2^n - 1)
     if (wmh_nb[0])
         width = (double) wmh[0] / ((1u << wmh_nb[0]) - 1);

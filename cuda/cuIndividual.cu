@@ -2,14 +2,14 @@
 // Created by elturpin on 22/10/2020.
 //
 
-#include "Individual_CUDA.cuh"
+#include "cuIndividual.cuh"
 #include "misc_functions.cuh"
 
 #include <cstdio>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 
-__device__ void Individual_CUDA::evaluate() {
+__device__ void cuIndividual::evaluate() {
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
     for (uint position = idx; position < size; position += rr_width) {
@@ -53,7 +53,7 @@ __device__ void Individual_CUDA::evaluate() {
     }
 }
 
-__device__ void Individual_CUDA::prepare_rnas() {
+__device__ void cuIndividual::prepare_rnas() {
     int insert_position = 0;
 
     for (uint read_position = 0; read_position < size; ++read_position) {
@@ -71,7 +71,7 @@ __device__ void Individual_CUDA::prepare_rnas() {
     nb_rnas = insert_position;
 }
 
-__device__ void Individual_CUDA::compute_rna(uint rna_idx) const {
+__device__ void cuIndividual::compute_rna(uint rna_idx) const {
     auto &rna = list_rnas[rna_idx];
     uint start_transcript = rna.start_transcription;
     if (not nb_terminator) {
@@ -91,7 +91,7 @@ __device__ void Individual_CUDA::compute_rna(uint rna_idx) const {
     }
 }
 
-__device__ void Individual_CUDA::prepare_gene(uint rna_idx) const {
+__device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     auto &rna = list_rnas[rna_idx];
     if (rna.errors > 5) {
         rna.nb_gene = 0;
@@ -123,7 +123,7 @@ __device__ void Individual_CUDA::prepare_gene(uint rna_idx) const {
     // Let us put their position in a list
 
     rna.nb_gene = nb_gene;
-    rna.list_gene = nb_gene ? new Gene[nb_gene] : nullptr;
+    rna.list_gene = nb_gene ? new cuGene[nb_gene] : nullptr;
     for (int i = 0; i < nb_gene; ++i) {
         uint start = list_ps[first_next_ps] + SD_TO_START;
         if (start >= size) {
@@ -137,14 +137,14 @@ __device__ void Individual_CUDA::prepare_gene(uint rna_idx) const {
     }
 }
 
-__device__ void Individual_CUDA::gather_genes() {
+__device__ void cuIndividual::gather_genes() {
     nb_gene = 0;
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
         nb_gene += list_rnas[idx_rna].nb_gene;
     }
 
-    list_gene = new Gene[nb_gene];
-    list_protein = new Protein[nb_gene];
+    list_gene = new cuGene[nb_gene];
+    list_protein = new cuProtein[nb_gene];
     uint insert_idx = 0;
 
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
@@ -158,7 +158,7 @@ __device__ void Individual_CUDA::gather_genes() {
     }
 }
 
-__device__ void Individual_CUDA::translate_gene(uint gene_idx) const {
+__device__ void cuIndividual::translate_gene(uint gene_idx) const {
     const auto &gene = list_gene[gene_idx];
 
     uint max_distance = gene.length_limit;
@@ -199,7 +199,7 @@ __device__ void Individual_CUDA::translate_gene(uint gene_idx) const {
 #define PRINT_HEADER(STRING)  printf("\n<%s>\n", STRING)
 #define PRINT_CLOSING(STRING) printf("</%s>\n", STRING)
 
-__device__ void Individual_CUDA::print_metadata_summary() const {
+__device__ void cuIndividual::print_metadata_summary() const {
     __syncthreads();
     if (threadIdx.x == 0) {
         PRINT_HEADER("METADATA_SUMMARY");
@@ -209,7 +209,7 @@ __device__ void Individual_CUDA::print_metadata_summary() const {
     __syncthreads();
 }
 
-__device__ void Individual_CUDA::print_rnas() const {
+__device__ void cuIndividual::print_rnas() const {
     __syncthreads();
     if (threadIdx.x == 0) {
         PRINT_HEADER("ARNS");
@@ -230,7 +230,7 @@ __device__ void Individual_CUDA::print_rnas() const {
     __syncthreads();
 }
 
-__device__ void Individual_CUDA::print_gathered_genes() const {
+__device__ void cuIndividual::print_gathered_genes() const {
     __syncthreads();
     if (threadIdx.x == 0) {
         PRINT_HEADER("GENES");
@@ -241,13 +241,13 @@ __device__ void Individual_CUDA::print_gathered_genes() const {
             printf("\t%d: concentration: %d\n", start, list_gene[i].concentration);
         }
 
-        printf("\nnumber of potential gene: %u <> %u|%u\n", nb_gene);
+        printf("\nnumber of potential gene: %u\n", nb_gene);
         PRINT_CLOSING("GENES");
     }
     __syncthreads();
 }
 
-__device__ void Individual_CUDA::print_proteins() const {
+__device__ void cuIndividual::print_proteins() const {
     __syncthreads();
     if (threadIdx.x == 0) {
         PRINT_HEADER("PROTEINS");
@@ -261,7 +261,7 @@ __device__ void Individual_CUDA::print_proteins() const {
 
         }
 
-        printf("\nnumber of proteins: %u <> %u|%u\n", nb_prot);
+        printf("\nnumber of proteins: %u\n", nb_prot);
         PRINT_CLOSING("PROTEINS");
     }
     __syncthreads();
