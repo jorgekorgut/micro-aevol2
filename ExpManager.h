@@ -40,8 +40,9 @@
  * It is also that class that implements checkpointing and restore mechanisms.
  */
 class ExpManager : public Abstract_ExpManager {
-
-
+#ifdef USE_CUDA
+    friend class ExpManager_CUDA;
+#endif
 public:
     ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
                int backup_step);

@@ -6,30 +6,29 @@
 #include "GPUDna.cuh"
 
 #include <cstdint>
-#include <stdio.h>
+#include <cstdio>
+#include <cassert>
 #include <unistd.h>
 
 #include <iostream>
 
-#include<cuda.h>
-#include<cuda_profiler_api.h>
+#include <cuda.h>
+#include <cuda_profiler_api.h>
 
 using namespace std;
 
-#define DEBUG 1
 // Convenience function for checking CUDA runtime API results
 // can be wrapped around any runtime API call. No-op in release builds.
 inline
-cudaError_t checkCuda(cudaError_t result)
+void checkCuda(cudaError_t result)
 {
-#if defined(DEBUG) || defined(_DEBUG)
+#if !defined(_NDEBUG)
     if (result != cudaSuccess) {
         fprintf(stderr, "CUDA Runtime Error: %s\n",
                 cudaGetErrorString(result));
         assert(result == cudaSuccess);
     }
 #endif
-    return result;
 }
 
 
@@ -257,10 +256,10 @@ __global__
 void search_start_stop_RNA(size_t* dna_size, char* dna, size_t* dna_offset, int* nb_promoters,
                            int8_t* dna_term, int nb_indivs, int global_dna_size, unsigned long long* nb_mut_bp) {
 
-    int dna_pos_block = blockIdx.x;
-    int indiv_id = blockIdx.y;
+    uint dna_pos_block = blockIdx.x;
+    uint indiv_id = blockIdx.y;
 
-    int dna_pos = (dna_pos_block*128)+threadIdx.x;
+    uint dna_pos = (dna_pos_block * blockDim.x) + threadIdx.x;
 
     __shared__ int nb_prom_block;
     if (threadIdx.x == 0) {
@@ -1075,7 +1074,7 @@ __global__ void selection(double* fitness, int* next_generation_reproducer, unsi
                 cur_y = (y + j + grid_height) % grid_height;
 
                 local_fit_array[count] = fitness[cur_x * grid_height + cur_y];
-                atomicAdd(&sum_local_fit, local_fit_array[count]);
+                atomicAdd(&sum_local_fit, local_fit_array + count);
 
                 count++;
             }

@@ -30,8 +30,11 @@
 #include <getopt.h>
 #include <cstring>
 
-#include "ExpManager.h"
+#ifdef USE_CUDA
+#include "cuda/ExpManager_CUDA.h"
+#endif
 #include "Abstract_ExpManager.h"
+#include "ExpManager.h"
 
 void print_help(char* prog_path) {
     // Get the program file-name in prog_name (strip prog_path of the path)
@@ -182,17 +185,17 @@ int main(int argc, char* argv[]) {
 
     Abstract_ExpManager *exp_manager;
     if (resume == -1) {
-#ifdef USE_CUDA
-#else
         exp_manager = new ExpManager(height, width, seed, mutation_rate, genome_size, backup_step);
-#endif
     } else {
         printf("Resuming...\n");
-#ifdef USE_CUDA
-#else
         exp_manager = new ExpManager(resume);
-#endif
     }
+
+#ifdef USE_CUDA
+    // Not very clean but the goal is to re-use the initialization on the host to transfer data to device
+    auto* tmp = dynamic_cast<ExpManager *>(exp_manager);
+    exp_manager = new ExpManager_CUDA(tmp);
+#endif
 
     exp_manager->run_evolution(nbstep);
 
