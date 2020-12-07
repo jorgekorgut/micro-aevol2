@@ -206,7 +206,7 @@ void Organism::compute_RNA() {
         }
 
         if (terminator_found) {
-            int32_t rna_end = cur_pos + TERMINATOR_SIZE;
+            int32_t rna_end = cur_pos + TERM_SIZE;
             loop_back(rna_end);
 
             int32_t rna_length;
@@ -686,7 +686,7 @@ void Organism::look_for_new_promoters_starting_between(int32_t pos_1, int32_t po
     for (int32_t i = pos_1; i < pos_2; i++) {
         int8_t dist = dna_->promoter_at(i);
 
-        if (dist <= MAX_PROM_ERROR) { // dist takes the hamming distance of the sequence from the consensus
+        if (dist <= PROM_MAX_DIFF) { // dist takes the hamming distance of the sequence from the consensus
             add_new_promoter(i, dist);
         }
     }

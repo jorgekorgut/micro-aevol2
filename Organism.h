@@ -37,19 +37,7 @@
 #include "Protein.h"
 #include "Dna.h"
 #include "MutationEvent.h"
-
-// Protein / Fuzzy space
-constexpr double X_MIN = 0.0;
-constexpr double X_MAX = 1.0;
-constexpr double Y_MIN = 0.0;
-constexpr double Y_MAX = 1.0;
-constexpr double H_MIN = -1.0;
-constexpr double H_MAX = 1.0;
-constexpr double W_MIN = 0.0;
-constexpr double W_MAX = 0.1;
-
-constexpr int FUZZY_SAMPLING = 300;
-constexpr int SELECTION_PRESSURE = 1000;
+#include "aevol_constants.h"
 
 /**
  * Class that implements an organism and its related DNAs, RNAs, Protein and Phenotype

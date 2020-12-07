@@ -171,7 +171,7 @@ int Dna::terminator_at(int pos) {
         int right = pos + motif_id;
         if (right >= seq_.size())
             right -= seq_.size();
-        int left = pos + TERMINATOR_SIZE - motif_id;
+        int left = pos + TERM_SIZE - motif_id;
         if (left >= seq_.size())
             left -= seq_.size();
         // Search for the terminators
