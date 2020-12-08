@@ -13,14 +13,11 @@ __device__ void cuIndividual::evaluate() {
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
     for (uint position = idx; position < size; position += rr_width) {
-        const char *genome_at_pos_leading = genome + position;
-        const char *genome_at_pos_lagging = genome + (size - 1 - position);
+        const char *genome_at_pos = genome + position;
 
-        promoters[position]   = is_promoter(genome_at_pos_leading);
-        terminators[position] = is_terminator(genome_at_pos_leading);
-        terminators[position] = is_terminator(genome_at_pos_lagging);
-        prot_start[position]  = is_prot_start(genome_at_pos_leading);
-        prot_start[position]  = is_prot_start(genome_at_pos_lagging);
+        promoters[position]   = is_promoter(genome_at_pos);
+        terminators[position] = is_terminator(genome_at_pos);
+        prot_start[position]  = is_prot_start(genome_at_pos);
     }
     __syncthreads();
 
@@ -74,26 +71,21 @@ __device__ void cuIndividual::prepare_rnas() {
 __device__ void cuIndividual::compute_rna(uint rna_idx) const {
     auto &rna = list_rnas[rna_idx];
     uint start_transcript = rna.start_transcription;
-    if (not nb_terminator) {
-        rna.errors = 0b1111u;
-        return;
-    }
+
     // get end of transcription
     // find the smallest element greater than start
     uint idx_term = find_smallest_greater(start_transcript, terminators, nb_terminator);
     uint term_position = terminators[idx_term];
     uint transcript_length = get_distance(start_transcript, term_position) + TERM_SIZE;
-
+    rna.transcription_length = transcript_length;
     if (transcript_length < DO_TRANSLATION_LOOP) {
-        rna.errors = 0b1111u;
-    } else {
-        rna.transcription_length = transcript_length;
+        rna.errors += 0b1000u;
     }
 }
 
 __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     auto &rna = list_rnas[rna_idx];
-    if (rna.errors > 5) {
+    if (rna.errors > PROM_MAX_DIFF) {
         rna.nb_gene = 0;
         rna.list_gene = nullptr;
         return;
@@ -216,11 +208,20 @@ __device__ void cuIndividual::print_rnas() const {
         uint nb_coding_rna = 0;
         for (int i = 0; i < nb_rnas; ++i) {
             const auto &rna = list_rnas[i];
-            if (rna.errors <= PROM_MAX_DIFF) { // is LEADING
+            if (rna.errors <= PROM_MAX_DIFF) {
                 nb_coding_rna++;
                 uint start = rna.start_transcription;
                 uint end = (start + rna.transcription_length) % size;
                 printf("%d -> %d | %d\n", start, end, rna.errors);
+            }
+        }
+        printf("Non coding: \n");
+        for (int i = 0; i < nb_rnas; ++i) {
+            const auto &rna = list_rnas[i];
+            if (rna.errors > PROM_MAX_DIFF) {
+                uint start = rna.start_transcription;
+                uint end = (start + rna.transcription_length) % size;
+                printf("%d -> %d | %d\n", start, end, (rna.errors - 0b1000u));
             }
         }
 
