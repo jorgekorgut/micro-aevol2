@@ -6,6 +6,7 @@
 
 #include "Abstract_ExpManager.h"
 #include "ExpManager.h"
+#include "RNG.cuh"
 
 class cuIndividual;
 
@@ -13,9 +14,11 @@ class cuExpManager: public Abstract_ExpManager {
 public:
     explicit cuExpManager(const ExpManager* cpu_exp);
 
-    void save(int t) override;
+    ~cuExpManager() override;
 
     void run_evolution(int nb_gen) override;
+
+    void save(int t) override;
 
     void load(int t) override;
 
@@ -24,13 +27,13 @@ private:
     int nb_indivs_;
 
     int dna_length_;
-    char **host_organisms_;
+    char** host_organisms_;
 
-    unsigned int seed_;
+    key_value_type seed_;
     size_t nb_counter_;
-    unsigned long long *counters_;
+    ctr_value_type* counters_;
 
-    double *target_;
+    double* target_;
 
     int grid_height_;
     int grid_width_;
@@ -43,8 +46,10 @@ private:
     void transfer_to_device();
 
     // Device data
-    cuIndividual *device_organisms_;
+    cuIndividual* device_organisms_;
 
+    key_type* device_seed_;
+    ctr_value_type* device_rng_counters;
 };
 
 

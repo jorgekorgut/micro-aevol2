@@ -10,12 +10,23 @@
 #include <cuda_profiler_api.h>
 
 #include "AeTime.h"
-#include "ExpManager.h"
 
 #include "cuIndividual.cuh"
 
 using namespace std::chrono;
 using namespace std;
+
+#if !defined(_NDEBUG)
+#define checkCuda(X) { \
+    auto result = X; \
+    if (result != cudaSuccess) { \
+        fprintf(stderr, "CUDA Runtime Error: %s in file %s line %d\\n\n", \
+                cudaGetErrorString(result), __FILE__, __LINE__); \
+        assert(result == cudaSuccess); \
+    } }
+#else
+#define checkCuda(X) X
+#endif
 
 cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     grid_height_ = cpu_exp->grid_height_;
@@ -38,20 +49,43 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
 
     seed_ = cpu_exp->seed_;
     nb_counter_ = cpu_exp->rng_->counters().size();
-    counters_ = new unsigned long long[nb_counter_];
+    counters_ = new ctr_value_type[nb_counter_];
     for (int i = 0; i < nb_counter_; ++i) {
         counters_[i] = cpu_exp->rng_->counters()[i];
     }
 }
 
+cuExpManager::~cuExpManager() {
+
+}
+
+__global__
+void evaluate_population(uint nb_indivs, cuIndividual* individuals) {
+    // one block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs) {
+        individuals[indiv_idx].evaluate();
+    }
+    if (indiv_idx == 0) {
+        if (threadIdx.x == 0) {
+            individuals[0].print_proteins();
+        }
+    }
+}
+
 void cuExpManager::run_evolution(int nb_gen) {
-//    cudaProfilerStart();
-//    high_resolution_clock::time_point t1 = high_resolution_clock::now();
-//    cout << "Transfer" << endl;
-//    transfer_to_device();
-//    high_resolution_clock::time_point t2 = high_resolution_clock::now();
-//    auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-//    cout << "Transfer done in " << duration_transfer_in << endl;
+    cudaProfilerStart();
+    cout << "Transfer" << endl;
+    high_resolution_clock::time_point t1 = high_resolution_clock::now();
+    transfer_to_device();
+    high_resolution_clock::time_point t2 = high_resolution_clock::now();
+    auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+    cout << "Transfer done in " << duration_transfer_in << " µs" << endl;
+
+    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_);
+    cudaDeviceSynchronize();
+    checkCuda(cudaGetLastError());
+
 //
 //    printf("Running evolution GPU from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
 //    bool firstGen = true;
@@ -83,12 +117,12 @@ void cuExpManager::load(int t) {
 }
 
 __global__
-void init_device_population(int nb_indiv, int dna_length, cuIndividual* all_individuals, char* all_genomes,
-                            uint8_t* all_promoters, uint* all_terminators, uint* all_prot_start) {
+void init_device_population(int nb_indivs, int dna_length, cuIndividual* all_individuals, char* all_genomes,
+                            uint8_t* all_promoters, uint* all_terminators, uint* all_prot_start, cuRNA* all_rnas) {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
     auto rr_width = blockDim.x * gridDim.x;
 
-    for (int i = idx; i < nb_indiv; i += rr_width) {
+    for (int i = idx; i < nb_indivs; i += rr_width) {
         auto& local_indiv = all_individuals[i];
         local_indiv.size = dna_length;
         auto offset = dna_length * i;
@@ -96,38 +130,69 @@ void init_device_population(int nb_indiv, int dna_length, cuIndividual* all_indi
         local_indiv.promoters = all_promoters + offset;
         local_indiv.terminators = all_terminators + offset;
         local_indiv.prot_start = all_prot_start + offset;
+        local_indiv.list_rnas = all_rnas + offset;
+    }
+//    __syncthreads();
+//    if (idx == 0) {
+//        for (int i = 0; i < nb_indivs; ++i) {
+//            auto& local_indiv = all_individuals[i];
+//            for (int j = 0; j < 20; ++j) {
+//                printf("%c", local_indiv.genome[j]);
+//            }
+//            printf("\n");
+//        }
+//    }
+}
+
+__global__
+void check_rng(key_type* seed, ctr_value_type* counter, int nb_indivs) {
+    auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (idx == 0) {
+        printf("seed: %lu, counter[nb_indivs]: %lu\n", (*seed)[1], counter[nb_indivs]);
     }
 }
 
 void cuExpManager::transfer_to_device() {
     // Allocate memory in device world
-    cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual));
+    checkCuda(cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual)));
     char* all_genomes;
     auto all_genomes_size = nb_indivs_ * dna_length_;
     // For each genome, we add a phantom space at the end.
     auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
 
-    cudaMalloc(&(all_genomes), all_genomes_size_w_phantom * sizeof(char));
+    checkCuda(cudaMalloc(&(all_genomes), all_genomes_size_w_phantom * sizeof(char)));
 
     uint8_t* all_promoters;
     uint* all_terminators;
     uint* all_prot_start;
-    cudaMalloc(&(all_promoters), all_genomes_size * sizeof(uint8_t));
-    cudaMalloc(&(all_terminators), all_genomes_size * sizeof(uint));
-    cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(uint));
+    cuRNA* all_rnas;
+    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(uint8_t)));
+    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(uint)));
+    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(uint)));
+    checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(cuRNA)));
 
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
         auto offset = dna_length_ + PROM_SIZE;
         auto indiv_genome_pointer = all_genomes + (i * offset);
         auto indiv_genome_phantom_pointer = indiv_genome_pointer + dna_length_;
-        cudaMemcpy(indiv_genome_pointer, host_organisms_[i], dna_length_, cudaMemcpyHostToDevice);
-        cudaMemcpy(indiv_genome_phantom_pointer, host_organisms_[i], PROM_SIZE, cudaMemcpyHostToDevice);
+        checkCuda(cudaMemcpy(indiv_genome_pointer, host_organisms_[i], dna_length_, cudaMemcpyHostToDevice));
+        checkCuda(cudaMemcpy(indiv_genome_phantom_pointer, host_organisms_[i], PROM_SIZE, cudaMemcpyHostToDevice));
     }
 
-    init_device_population<<<1, 1>>>(nb_indivs, dna_length_, all_genomes)
-
-    // Evaluate all the individuals
+    init_device_population<<<1, 1>>>(nb_indivs_, dna_length_, device_organisms_, all_genomes,
+                                     all_promoters, all_terminators, all_prot_start, all_rnas);
+    cudaDeviceSynchronize();
+    checkCuda(cudaGetLastError());
 
     // Transfer data from prng
+    checkCuda(cudaMalloc(&(device_rng_counters), nb_counter_ * sizeof(ctr_value_type)));
+    checkCuda(cudaMemcpy(device_rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
+    key_type tmp = {{0, seed_}};
+    checkCuda(cudaMalloc(&(device_seed_), sizeof(key_type)));
+    checkCuda(cudaMemcpy(device_seed_, &tmp, sizeof(key_type), cudaMemcpyHostToDevice));
+
+    check_rng<<<1, 1>>>(device_seed_, device_rng_counters, nb_indivs_);
+    cudaDeviceSynchronize();
+    checkCuda(cudaGetLastError());
 }
