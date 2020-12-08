@@ -159,7 +159,7 @@ private:
     }
 
     int loop_back(int &position) const {
-        if (position > length())
+        if (position >= length())
             position -= length();
         return position;
     }
