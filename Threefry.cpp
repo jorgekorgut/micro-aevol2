@@ -3,7 +3,7 @@
 #include <cmath>
 
 void Threefry::save(gzFile backup_file) const {
-  unsigned int seed = seed_[1];
+  Threefry123::key_type::value_type seed = seed_[1];
   gzwrite(backup_file, &seed, sizeof(seed));
   gzwrite(backup_file, counters_.data(), counters_.size() * sizeof(counters_[0]));
 }
@@ -11,15 +11,15 @@ void Threefry::save(gzFile backup_file) const {
 Threefry::Threefry(int X, int Y, gzFile backup_file)
         : counters_(X * Y * NPHASES, 0), X_(X), Y_(Y), N_(X * Y) {
 
-  unsigned int seed;
+  Threefry123::key_type::value_type seed;
   gzread(backup_file, &seed, sizeof(seed));
   seed_[0] = 0;
   seed_[1] = seed;
 
-  unsigned long long tmp_counters[counters_.size()];
+  crt_value_type tmp_counters[counters_.size()];
   gzread(backup_file, tmp_counters, counters_.size() * sizeof(tmp_counters[0]));
 
-  counters_ = std::vector<unsigned long long>(tmp_counters, tmp_counters + counters_.size());
+  counters_ = std::vector<crt_value_type>(tmp_counters, tmp_counters + counters_.size());
 }
 
 int32_t Threefry::Gen::roulette_random(double* probs, int32_t nb_elts, bool verbose )

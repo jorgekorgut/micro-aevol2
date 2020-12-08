@@ -11,6 +11,7 @@
 class Threefry {
 public:
     typedef r123::Threefry2x64_R<20> Threefry123;
+    typedef Threefry123::ctr_type::value_type crt_value_type;
 
     enum Phase {
         REPROD = 0, MUTATION = 1, NPHASES
@@ -23,7 +24,7 @@ public:
 
     Threefry(int X, int Y, gzFile backup_file);
 
-    std::vector<unsigned long long> &counters() { return counters_; }
+    std::vector<crt_value_type> &counters() { return counters_; }
 
     class Gen {
         Threefry123::ctr_type state_;
@@ -101,7 +102,7 @@ public:
     inline void initDevice();
 
 private:
-    std::vector<unsigned long long> counters_;
+    std::vector<crt_value_type> counters_;
     int X_, Y_, N_;
     Threefry123::key_type seed_;
 };
