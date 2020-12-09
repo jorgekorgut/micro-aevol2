@@ -48,6 +48,8 @@ __device__ void cuIndividual::evaluate() {
     for (uint gene_idx = idx; gene_idx < nb_gene; gene_idx += rr_width) {
         translate_gene(gene_idx);
     }
+    __syncthreads();
+    compute_phenotype();
 }
 
 __device__ void cuIndividual::prepare_rnas() {
@@ -187,6 +189,66 @@ __device__ void cuIndividual::translate_gene(uint gene_idx) const {
         new_protein.concentration = 0.0;
 }
 
+__device__ void cuIndividual::compute_phenotype() {
+    auto idx = threadIdx.x;
+    auto rr_width = blockDim.x;
+    
+    __shared__ double phenotype_activ_inhib[2][FUZZY_SAMPLING]; // { activ_phenotype, inhib_phenotype }
+
+    for (int protein_idx = idx; protein_idx < nb_gene; protein_idx += rr_width) {
+        auto& protein = list_protein[protein_idx];
+        if (protein.is_functional()) {
+            int8_t activ_inhib = protein.height > 0 ? 0 : 1;
+            // left point abscissa of triangle
+            double left_absc = protein.mean - protein.width;
+            // mid point abscissa of triangle
+            double mid_absc = protein.mean;
+            // right point abscissa of triangle
+            double right_absc = protein.mean + protein.width;
+
+            // Interface between continuous world (up) and discrete world (down)
+            int i_left_absc  = (int) (left_absc  * FUZZY_SAMPLING);
+            int i_mid_absc   = (int) (mid_absc   * FUZZY_SAMPLING);
+            int i_right_absc = (int) (right_absc * FUZZY_SAMPLING);
+
+            // capping/clamp values
+            i_left_absc  = clamp(i_left_absc,  0, FUZZY_SAMPLING - 1);
+            i_mid_absc   = clamp(i_mid_absc,   0, FUZZY_SAMPLING - 1);
+            i_right_absc = clamp(i_right_absc, 0, FUZZY_SAMPLING - 1);
+
+            // Compute the first equation of the triangle
+            double height = protein.height * (double)protein.concentration;
+            double triangle_slope = height / (double)(i_mid_absc - i_left_absc);
+            int count = 1;
+
+            // Updating value between left_absc and mid_absc
+            for (int i = i_left_absc + 1; i <= i_mid_absc; i++) {
+                phenotype_activ_inhib[activ_inhib][i] += (triangle_slope * count);
+                count++;
+            }
+            //atomicAdd(&phenotype_activ_inhib[activ_inhib][i_mid_absc], height);
+
+            // Compute the second equation of the triangle
+            triangle_slope = height / (double)(i_right_absc - i_mid_absc);
+            count = 1;
+            // Updating value between mid_absc and right_absc
+            for (int i = i_right_absc - 1; i > i_mid_absc; i--) {
+                phenotype_activ_inhib[activ_inhib][i] += (triangle_slope * count);
+                count++;
+            }
+        }
+    }
+    __syncthreads();
+
+    for (int fuzzy_idx = idx; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx += rr_width) {
+        phenotype_activ_inhib[0][fuzzy_idx] = min(phenotype_activ_inhib[0][fuzzy_idx],  1.0);
+        phenotype_activ_inhib[1][fuzzy_idx] = max(phenotype_activ_inhib[1][fuzzy_idx], -1.0);
+        // phenotype = active_phenotype + inhib_phenotype (inhib_phenotype < 0)
+        phenotype[fuzzy_idx] = phenotype_activ_inhib[0][fuzzy_idx] + phenotype_activ_inhib[1][fuzzy_idx];
+        phenotype[fuzzy_idx] = clamp(phenotype[fuzzy_idx], 0.0, 1.0);
+    }
+}
+
 // ************ PRINTING
 #define PRINT_HEADER(STRING)  printf("\n<%s>\n", STRING)
 #define PRINT_CLOSING(STRING) printf("</%s>\n", STRING)
@@ -264,6 +326,23 @@ __device__ void cuIndividual::print_proteins() const {
 
         printf("\nnumber of proteins: %u\n", nb_prot);
         PRINT_CLOSING("PROTEINS");
+    }
+    __syncthreads();
+}
+
+__device__ void cuIndividual::print_phenotype() const {
+    __syncthreads();
+    if (threadIdx.x == 0) {
+        PRINT_HEADER("PHENOTYPE");
+        for (int i = 0; i < FUZZY_SAMPLING; ++i) {
+            if (phenotype[i] == 0.0){
+                printf("0|");
+            } else {
+                printf("%f|", phenotype[i]);
+            }
+        }
+        printf("\n");
+        PRINT_CLOSING("PHENOTYPE");
     }
     __syncthreads();
 }

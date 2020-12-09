@@ -23,6 +23,11 @@ public:
     void load(int t) override;
 
 private:
+    void run_a_step();
+
+    // Interface Host - Device
+    void transfer_to_device();
+
     // Host Data
     int nb_indivs_;
 
@@ -41,9 +46,6 @@ private:
     double mutation_rate_;
 
     int backup_step_;
-
-    // Interface Host - Device
-    void transfer_to_device();
 
     // Device data
     cuIndividual* device_organisms_;

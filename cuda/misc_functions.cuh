@@ -42,6 +42,12 @@ __device__ uint find_smallest_greater(T value, const T* array, uint size){
   return min;
 }
 
+template<typename T>
+__device__ T clamp(T x, T a, T b)
+{
+    return max(a, min(b, x));
+}
+
 
 /// Specific to Aevol model
 

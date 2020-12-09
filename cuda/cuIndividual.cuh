@@ -10,6 +10,7 @@
 #include "cuProtein.cuh"
 
 struct cuGene {
+    // value function of the error of the RNA hosting the gene
     uint8_t concentration;
     // position at which translation will start, after the START
     uint start;
@@ -39,6 +40,8 @@ struct cuIndividual {
 
     __device__ void translate_gene(uint gene_idx) const;
 
+    __device__ void compute_phenotype();
+
     inline __device__ uint get_distance(uint a, uint b) const {
         if (a > b)
             return (b + size) - a;
@@ -60,6 +63,8 @@ struct cuIndividual {
 
     __device__ void print_proteins() const;
 
+    __device__ void print_phenotype() const;
+
     uint size;
     char *genome;
     uint8_t *promoters;
@@ -74,4 +79,6 @@ struct cuIndividual {
     uint nb_gene;
     cuGene *list_gene;
     cuProtein *list_protein;
+
+    double phenotype[FUZZY_SAMPLING]{};
 };

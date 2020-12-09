@@ -69,8 +69,19 @@ void evaluate_population(uint nb_indivs, cuIndividual* individuals) {
     if (indiv_idx == 0) {
         if (threadIdx.x == 0) {
             individuals[0].print_proteins();
+            individuals[0].print_phenotype();
         }
     }
+}
+
+void cuExpManager::run_a_step() {
+    // Selection
+
+    // Mutation
+
+    // Evaluation
+    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_);
+
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -86,15 +97,14 @@ void cuExpManager::run_evolution(int nb_gen) {
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 
-//
-//    printf("Running evolution GPU from %d to %d\n",AeTime::time(),AeTime::time()+nb_gen);
+//    printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
 //    bool firstGen = true;
 //    for (int gen = 0; gen < nb_gen+1; gen++) {
 //        if(gen == 91) nvtxRangePushA("generation 91 to 100");
 //        AeTime::plusplus();
 //
 //        high_resolution_clock::time_point t1 = high_resolution_clock::now();
-//        run_a_step_on_GPU(nb_indivs_, w_max_, selection_pressure_, grid_width_, grid_height_,mutation_rate_);
+//        run_a_step();
 //
 //        t2 = high_resolution_clock::now();
 //        auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
@@ -182,8 +192,8 @@ void cuExpManager::transfer_to_device() {
 
     init_device_population<<<1, 1>>>(nb_indivs_, dna_length_, device_organisms_, all_genomes,
                                      all_promoters, all_terminators, all_prot_start, all_rnas);
-    cudaDeviceSynchronize();
-    checkCuda(cudaGetLastError());
+//    cudaDeviceSynchronize();
+//    checkCuda(cudaGetLastError());
 
     // Transfer data from prng
     checkCuda(cudaMalloc(&(device_rng_counters), nb_counter_ * sizeof(ctr_value_type)));
@@ -192,7 +202,7 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMalloc(&(device_seed_), sizeof(key_type)));
     checkCuda(cudaMemcpy(device_seed_, &tmp, sizeof(key_type), cudaMemcpyHostToDevice));
 
-    check_rng<<<1, 1>>>(device_seed_, device_rng_counters, nb_indivs_);
+//    check_rng<<<1, 1>>>(device_seed_, device_rng_counters, nb_indivs_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 }
