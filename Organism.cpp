@@ -527,18 +527,12 @@ void Organism::compute_phenotype() {
             int count = 1;
 
             // Updating value between x0 and x1
-            for (int i = ix0 + 1; i < ix1; i++) {
+            for (int i = ix0 + 1; i <= ix1; i++) {
                 if (protein->h > 0)
                     activ_phenotype[i] += (incY * (count++));
                 else
                     inhib_phenotype[i] += (incY * (count++));
             }
-
-            if (protein->h > 0)
-                activ_phenotype[ix1] += (protein->h * protein->e);
-            else
-                inhib_phenotype[ix1] += (protein->h * protein->e);
-
 
             // Compute the second equation of the triangle
             incY = (protein->h * protein->e) / (ix2 - ix1);
