@@ -78,8 +78,8 @@ public:
     std::vector<RNA *> rnas;
     std::vector<Protein *> proteins;
 
-    double phenotype[300]{};
-    double delta[300]{};
+    double phenotype[FUZZY_SAMPLING]{};
+    double delta[FUZZY_SAMPLING]{};
 
     double fitness = 0.0;
     double metaerror = 0.0;
