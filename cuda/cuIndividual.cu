@@ -9,7 +9,7 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 
-__device__ void cuIndividual::evaluate() {
+__device__ void cuIndividual::evaluate(const double* target) {
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
     for (uint position = idx; position < size; position += rr_width) {
@@ -50,6 +50,8 @@ __device__ void cuIndividual::evaluate() {
     }
     __syncthreads();
     compute_phenotype();
+    __syncthreads();
+    compute_fitness(target);
 }
 
 __device__ void cuIndividual::prepare_rnas() {
@@ -246,6 +248,34 @@ __device__ void cuIndividual::compute_phenotype() {
         // phenotype = active_phenotype + inhib_phenotype (inhib_phenotype < 0)
         phenotype[fuzzy_idx] = phenotype_activ_inhib[0][fuzzy_idx] + phenotype_activ_inhib[1][fuzzy_idx];
         phenotype[fuzzy_idx] = clamp(phenotype[fuzzy_idx], 0.0, 1.0);
+    }
+}
+
+__device__ void cuIndividual::compute_fitness(const double* target) {
+    auto idx = threadIdx.x;
+    auto rr_width = blockDim.x;
+
+    __shared__ double delta[FUZZY_SAMPLING];
+    __shared__ double shared_meta_error[FUZZY_SAMPLING - 1];
+
+    for (int fuzzy_idx = idx; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx += rr_width) {
+        delta[fuzzy_idx] = phenotype[fuzzy_idx] - target[fuzzy_idx];
+    }
+    __syncthreads();
+    for (int fuzzy_idx = idx; fuzzy_idx < FUZZY_SAMPLING - 1; fuzzy_idx += rr_width) {
+        // Computing a trapezoid area (A+B)*h/2 with:
+        //   base A as delta[fuzzy_idx]
+        //   base B as delta[fuzzy_idx + 1]
+        //   height h as 1/FUZZY_SAMPLING
+        shared_meta_error[fuzzy_idx] = (fabs(delta[fuzzy_idx]) + fabs(delta[fuzzy_idx + 1])) / (2 * (double)FUZZY_SAMPLING);
+    }
+    __syncthreads();
+    if (idx == 0) {
+        double meta_error = 0.0;
+        for (int i = 0; i < FUZZY_SAMPLING - 1; ++i) {
+            meta_error += shared_meta_error[i];
+        }
+        fitness = exp(-SELECTION_PRESSURE * meta_error);
     }
 }
 

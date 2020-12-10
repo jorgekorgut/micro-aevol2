@@ -60,16 +60,15 @@ cuExpManager::~cuExpManager() {
 }
 
 __global__
-void evaluate_population(uint nb_indivs, cuIndividual* individuals) {
+void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double* target) {
     // one block per individual
     auto indiv_idx = blockIdx.x;
     if (indiv_idx < nb_indivs) {
-        individuals[indiv_idx].evaluate();
+        individuals[indiv_idx].evaluate(target);
     }
     if (indiv_idx == 0) {
         if (threadIdx.x == 0) {
-            individuals[0].print_proteins();
-            individuals[0].print_phenotype();
+            printf("Fitness: %0.10e\n", individuals[0].fitness);
         }
     }
 }
@@ -80,7 +79,7 @@ void cuExpManager::run_a_step() {
     // Mutation
 
     // Evaluation
-    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_);
+    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
 
 }
 
@@ -93,7 +92,7 @@ void cuExpManager::run_evolution(int nb_gen) {
     auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     cout << "Transfer done in " << duration_transfer_in << " µs" << endl;
 
-    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_);
+    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 
@@ -162,6 +161,18 @@ void check_rng(key_type* seed, ctr_value_type* counter, int nb_indivs) {
     }
 }
 
+__global__
+void check_target(double* target) {
+    for (int i = 0; i < FUZZY_SAMPLING; ++i) {
+        if (target[i] == 0.0){
+            printf("0|");
+        } else {
+            printf("%f|", target[i]);
+        }
+    }
+    printf("\n");
+}
+
 void cuExpManager::transfer_to_device() {
     // Allocate memory in device world
     checkCuda(cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual)));
@@ -195,6 +206,10 @@ void cuExpManager::transfer_to_device() {
 //    cudaDeviceSynchronize();
 //    checkCuda(cudaGetLastError());
 
+    // Transfer phenotypic target
+    checkCuda(cudaMalloc(&(device_target_), FUZZY_SAMPLING * sizeof(double)));
+    checkCuda(cudaMemcpy(device_target_, target_, FUZZY_SAMPLING * sizeof(double), cudaMemcpyHostToDevice));
+
     // Transfer data from prng
     checkCuda(cudaMalloc(&(device_rng_counters), nb_counter_ * sizeof(ctr_value_type)));
     checkCuda(cudaMemcpy(device_rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
@@ -203,6 +218,7 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMemcpy(device_seed_, &tmp, sizeof(key_type), cudaMemcpyHostToDevice));
 
 //    check_rng<<<1, 1>>>(device_seed_, device_rng_counters, nb_indivs_);
+//    check_target<<<1, 1>>>(device_target_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 }

@@ -50,6 +50,8 @@ private:
     // Device data
     cuIndividual* device_organisms_;
 
+    double* device_target_;
+
     key_type* device_seed_;
     ctr_value_type* device_rng_counters;
 };

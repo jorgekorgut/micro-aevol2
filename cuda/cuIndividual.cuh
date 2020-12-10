@@ -28,7 +28,7 @@ struct cuRNA {
 };
 
 struct cuIndividual {
-    __device__ void evaluate();
+    __device__ void evaluate(const double* target);
 
     __device__ void prepare_rnas();
 
@@ -41,6 +41,8 @@ struct cuIndividual {
     __device__ void translate_gene(uint gene_idx) const;
 
     __device__ void compute_phenotype();
+
+    __device__ void compute_fitness(const double* target);
 
     inline __device__ uint get_distance(uint a, uint b) const {
         if (a > b)
@@ -81,4 +83,5 @@ struct cuIndividual {
     cuProtein *list_protein;
 
     double phenotype[FUZZY_SAMPLING]{};
+    double fitness;
 };
