@@ -6,7 +6,7 @@
 
 #include "Abstract_ExpManager.h"
 #include "ExpManager.h"
-#include "RNG.cuh"
+#include "RandService.h"
 
 class cuIndividual;
 

@@ -91,8 +91,7 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
 
     uint grid_idx = grid_x * grid_width + grid_y;
 
-    auto rand_double = rand_service->gen_double(grid_idx, SELECTION);
-    auto selected_cell = random_roulette(rand_double, local_fit_array, NEIGHBORHOOD_SIZE);
+    auto selected_cell = rand_service->random_roulette(local_fit_array, NEIGHBORHOOD_SIZE, grid_idx, SELECTION);
 
     int x_offset = (selected_cell / NEIGHBORHOOD_WIDTH) - 1;
     int y_offset = (selected_cell % NEIGHBORHOOD_HEIGHT) - 1;

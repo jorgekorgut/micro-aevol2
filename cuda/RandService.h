@@ -20,17 +20,6 @@ inline R123_CUDA_DEVICE double int64_to_double(int64_t number) {
     return (number&((1llu<<48)-1))/double(1llu<<48);
 }
 
-inline R123_CUDA_DEVICE int random_roulette(double rand_number ,double* probability_array, int nb_elements) {
-    int selection = -1;
-    do
-    {
-        assert(selection < nb_elements - 1);
-        rand_number -= probability_array[++selection];
-    } while (rand_number > 0);
-
-    return selection;
-}
-
 struct RandService {
     RNG generator;
 
@@ -50,4 +39,7 @@ struct RandService {
     inline R123_CUDA_DEVICE double gen_double(uint idx, int phase) {
         return int64_to_double(gen_number(idx, phase));
     }
+
+    R123_CUDA_DEVICE int32_t binomial_random(int32_t nb_drawings, double prob, uint idx, int phase);
+    R123_CUDA_DEVICE int random_roulette(double* probability_array, int nb_elements, uint idx, int phase);
 };
