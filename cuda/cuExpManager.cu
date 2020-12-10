@@ -61,6 +61,48 @@ cuExpManager::~cuExpManager() {
 }
 
 __global__
+void selection(uint grid_height, uint grid_width, const cuIndividual* individuals, RandService* rand_service,
+               int* next_reproducers) {
+    // one thread per grid cell
+    int grid_x = threadIdx.x + blockIdx.x * blockDim.x;
+    int grid_y = threadIdx.y + blockIdx.y * blockDim.y;
+
+    double local_fit_array[NEIGHBORHOOD_SIZE];
+    int count = 0;
+    double sum_local_fit = 0.0;
+
+
+    for (int8_t i = -1; i < NEIGHBORHOOD_WIDTH - 1; i++) {
+        for (int8_t j = -1; j < NEIGHBORHOOD_HEIGHT - 1; j++) {
+            // Toric topology
+            int cur_x = (grid_x + i + grid_width) % grid_width;
+            int cur_y = (grid_y + j + grid_height) % grid_height;
+
+            local_fit_array[count] = individuals[cur_x * grid_width + cur_y].fitness;
+            sum_local_fit += local_fit_array[count];
+
+            count++;
+        }
+    }
+
+    for(int8_t i = 0 ; i < NEIGHBORHOOD_SIZE ; i++) {
+        local_fit_array[i] /= sum_local_fit;
+    }
+
+    uint grid_idx = grid_x * grid_width + grid_y;
+
+    auto rand_double = rand_service->gen_double(grid_idx, SELECTION);
+    auto selected_cell = random_roulette(rand_double, local_fit_array, NEIGHBORHOOD_SIZE);
+
+    int x_offset = (selected_cell / NEIGHBORHOOD_WIDTH) - 1;
+    int y_offset = (selected_cell % NEIGHBORHOOD_HEIGHT) - 1;
+    int selected_x = (grid_x + x_offset + grid_width) % grid_width;
+    int selected_y = (grid_y + y_offset + grid_height) % grid_height;
+
+    next_reproducers[grid_idx] = selected_x * grid_height + selected_y;
+}
+
+__global__
 void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double* target) {
     // one block per individual
     auto indiv_idx = blockIdx.x;
@@ -93,6 +135,15 @@ void cuExpManager::run_evolution(int nb_gen) {
     cout << "Transfer done in " << duration_transfer_in << " µs" << endl;
 
     evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
+    cudaDeviceSynchronize();
+    checkCuda(cudaGetLastError());
+
+    dim3 bloc_dim(3, 3);
+    selection<<<1, bloc_dim>>>(grid_height_,
+                               grid_width_,
+                               device_organisms_,
+                               rand_service_,
+                               next_generation_reproducer_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 
