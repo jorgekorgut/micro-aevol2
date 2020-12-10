@@ -296,12 +296,8 @@ ExpManager::~ExpManager() {
   * @param indiv_id : Unique identification number of the cell
  */
 void ExpManager::selection(int indiv_id) const {
-    int8_t selection_scope_x = 3;
-    int8_t selection_scope_y = 3;
-    int8_t neighborhood_size = 9;
-
-    double local_fit_array[neighborhood_size];
-    double probs[neighborhood_size];
+    double local_fit_array[NEIGHBORHOOD_SIZE];
+    double probs[NEIGHBORHOOD_SIZE];
     int count = 0;
     double sum_local_fit = 0.0;
 
@@ -310,27 +306,27 @@ void ExpManager::selection(int indiv_id) const {
 
     int cur_x, cur_y;
 
-    for (int8_t i = -1; i < selection_scope_x - 1; i++) {
-        for (int8_t j = -1; j < selection_scope_y - 1; j++) {
+    for (int8_t i = -1; i < NEIGHBORHOOD_WIDTH - 1; i++) {
+        for (int8_t j = -1; j < NEIGHBORHOOD_HEIGHT - 1; j++) {
             cur_x = (x + i + grid_width_) % grid_width_;
             cur_y = (y + j + grid_height_) % grid_height_;
 
-            local_fit_array[count] = prev_internal_organisms_[cur_x * grid_height_ + cur_y]->fitness;
+            local_fit_array[count] = prev_internal_organisms_[cur_x * grid_width_ + cur_y]->fitness;
             sum_local_fit += local_fit_array[count];
 
             count++;
         }
     }
 
-    for (int8_t i = 0; i < neighborhood_size; i++) {
+    for (int8_t i = 0; i < NEIGHBORHOOD_SIZE; i++) {
         probs[i] = local_fit_array[i] / sum_local_fit;
     }
 
     auto rng = std::move(rng_->gen(indiv_id, Threefry::REPROD));
-    int found_org = rng.roulette_random(probs, neighborhood_size);
+    int found_org = rng.roulette_random(probs, NEIGHBORHOOD_SIZE);
 
-    int x_offset = (found_org / selection_scope_x) - 1;
-    int y_offset = (found_org % selection_scope_y) - 1;
+    int x_offset = (found_org / NEIGHBORHOOD_WIDTH) - 1;
+    int y_offset = (found_org % NEIGHBORHOOD_HEIGHT) - 1;
 
     next_generation_reproducer_[indiv_id] = ((x + x_offset + grid_width_) % grid_width_) * grid_height_ +
                                             ((y + y_offset + grid_height_) % grid_height_);

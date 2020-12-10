@@ -48,3 +48,8 @@ constexpr double W_MAX = 0.1;
 
 constexpr int FUZZY_SAMPLING = 300;
 constexpr int SELECTION_PRESSURE = 1000;
+
+// Selection
+constexpr int8_t NEIGHBORHOOD_WIDTH  = 3;
+constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
+constexpr int8_t NEIGHBORHOOD_SIZE   = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
