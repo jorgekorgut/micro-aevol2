@@ -5,6 +5,7 @@
 #include "cuExpManager.h"
 
 #include <cstdio>
+#include <cassert>
 #include <chrono>
 #include "nvToolsExt.h"
 #include <cuda_profiler_api.h>
@@ -80,7 +81,6 @@ void cuExpManager::run_a_step() {
 
     // Evaluation
     evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
-
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -154,10 +154,14 @@ void init_device_population(int nb_indivs, int dna_length, cuIndividual* all_ind
 }
 
 __global__
-void check_rng(key_type* seed, ctr_value_type* counter, int nb_indivs) {
+void check_rng(RandService* rand_service) {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+    auto number = rand_service->generator({{0, rand_service->rng_counters[rand_service->phase_size]}}, rand_service->seed);
     if (idx == 0) {
-        printf("seed: %lu, counter[nb_indivs]: %lu\n", (*seed)[1], counter[nb_indivs]);
+        printf("seed: %lu, counter[nb_indivs]: %lu, test: %lu\n",
+               rand_service->seed[1],
+               rand_service->rng_counters[rand_service->phase_size],
+               number[0]);
     }
 }
 
@@ -174,7 +178,7 @@ void check_target(double* target) {
 }
 
 void cuExpManager::transfer_to_device() {
-    // Allocate memory in device world
+    // Allocate memory for individuals in device world
     checkCuda(cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual)));
     char* all_genomes;
     auto all_genomes_size = nb_indivs_ * dna_length_;
@@ -210,14 +214,22 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMalloc(&(device_target_), FUZZY_SAMPLING * sizeof(double)));
     checkCuda(cudaMemcpy(device_target_, target_, FUZZY_SAMPLING * sizeof(double), cudaMemcpyHostToDevice));
 
-    // Transfer data from prng
-    checkCuda(cudaMalloc(&(device_rng_counters), nb_counter_ * sizeof(ctr_value_type)));
-    checkCuda(cudaMemcpy(device_rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
-    key_type tmp = {{0, seed_}};
-    checkCuda(cudaMalloc(&(device_seed_), sizeof(key_type)));
-    checkCuda(cudaMemcpy(device_seed_, &tmp, sizeof(key_type), cudaMemcpyHostToDevice));
+    // Allocate memory for reproduction data
+    checkCuda(cudaMalloc(&(next_generation_reproducer_), nb_indivs_ * sizeof(int)));
 
-//    check_rng<<<1, 1>>>(device_seed_, device_rng_counters, nb_indivs_);
+    // Initiate Random Number generator
+    RandService tmp;
+    checkCuda(cudaMalloc(&(tmp.rng_counters), nb_counter_ * sizeof(ctr_value_type)));
+    checkCuda(cudaMemcpy(tmp.rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
+    tmp.seed = {{0, seed_}};
+    tmp.nb_phase = NPHASES;
+    tmp.phase_size = nb_indivs_;
+    assert(nb_counter_ == tmp.phase_size * tmp.nb_phase);
+
+    checkCuda(cudaMalloc(&(rand_service_), sizeof(RandService)));
+    checkCuda(cudaMemcpy(rand_service_, &tmp, sizeof(RandService), cudaMemcpyHostToDevice));
+
+//    check_rng<<<1, 1>>>(rand_service_);
 //    check_target<<<1, 1>>>(device_target_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());

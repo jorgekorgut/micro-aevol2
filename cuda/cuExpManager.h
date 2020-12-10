@@ -10,7 +10,7 @@
 
 class cuIndividual;
 
-class cuExpManager: public Abstract_ExpManager {
+class cuExpManager : public Abstract_ExpManager {
 public:
     explicit cuExpManager(const ExpManager* cpu_exp);
 
@@ -50,10 +50,11 @@ private:
     // Device data
     cuIndividual* device_organisms_;
 
+    int* next_generation_reproducer_;
+
     double* device_target_;
 
-    key_type* device_seed_;
-    ctr_value_type* device_rng_counters;
+    RandService* rand_service_;
 };
 
 
