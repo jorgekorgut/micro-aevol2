@@ -13,7 +13,7 @@ using ctr_value_type = ctr_type::value_type;
 using key_value_type = key_type::value_type;
 
 enum Phase {
-    SELECTION = 0, MUTATION = 1, NPHASES
+    SELECTION = 0, MUTATION = 1, NPHASES = 2
 };
 
 inline R123_CUDA_DEVICE double int64_to_double(int64_t number) {
@@ -23,23 +23,26 @@ inline R123_CUDA_DEVICE double int64_to_double(int64_t number) {
 struct RandService {
     RNG generator;
 
-    uint nb_phase;
     uint phase_size;
 
     key_type seed;
     ctr_value_type* rng_counters;
 
-    inline R123_CUDA_DEVICE ctr_value_type gen_number(uint idx, int phase) {
-        auto counter_idx = idx + phase * nb_phase;
+    inline R123_CUDA_DEVICE ctr_value_type gen_number(uint idx, Phase phase) {
+        auto counter_idx = idx + phase_size * phase;
         auto counter = ++rng_counters[counter_idx];
         ctr_type ctr = {{counter_idx, counter}};
         return generator(ctr, seed)[0];
     }
 
-    inline R123_CUDA_DEVICE double gen_double(uint idx, int phase) {
+    inline R123_CUDA_DEVICE double gen_double(uint idx, Phase phase) {
         return int64_to_double(gen_number(idx, phase));
     }
 
-    R123_CUDA_DEVICE int32_t binomial_random(int32_t nb_drawings, double prob, uint idx, int phase);
-    R123_CUDA_DEVICE int random_roulette(double* probability_array, int nb_elements, uint idx, int phase);
+    inline R123_CUDA_DEVICE unsigned int gen_number_max(unsigned int max, uint idx, Phase phase) {
+        return gen_double(idx, phase) * max;
+    }
+
+    R123_CUDA_DEVICE int32_t binomial_random(int32_t nb_drawings, double prob, uint idx, Phase phase);
+    R123_CUDA_DEVICE int random_roulette(double* probability_array, int nb_elements, uint idx, Phase phase);
 };

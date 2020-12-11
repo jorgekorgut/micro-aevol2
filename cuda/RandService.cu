@@ -7,7 +7,7 @@
 #include <cassert>
 #include <cmath>
 
-__device__ int RandService::random_roulette(double* probability_array, int nb_elements, uint idx, int phase) {
+__device__ int RandService::random_roulette(double* probability_array, int nb_elements, uint idx, Phase phase) {
     auto rand_number = gen_double(idx, phase);
     int selection = -1;
     do
@@ -48,7 +48,7 @@ __device__ static double gammln(double X)
 }
 
 __device__
-int32_t RandService::binomial_random(int32_t nb_drawings, double prob, uint idx, int phase) {
+int32_t RandService::binomial_random(int32_t nb_drawings, double prob, uint idx, Phase phase) {
     int32_t nb_success;
 
     // The binomial distribution is invariant under changing
