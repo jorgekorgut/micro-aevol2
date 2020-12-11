@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cassert>
 #include <chrono>
+#include <cmath>
 #include "nvToolsExt.h"
 #include <cuda_profiler_api.h>
 
@@ -63,9 +64,12 @@ cuExpManager::~cuExpManager() {
 __global__
 void selection(uint grid_height, uint grid_width, const cuIndividual* individuals, RandService* rand_service,
                int* next_reproducers) {
-    // one thread per grid cell
+    // One thread per grid cell
     int grid_x = threadIdx.x + blockIdx.x * blockDim.x;
     int grid_y = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (grid_x >= grid_width || grid_y >= grid_height)
+        return;
 
     double local_fit_array[NEIGHBORHOOD_SIZE];
     int count = 0;
@@ -102,8 +106,69 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
 }
 
 __global__
+void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproducers, const char* all_parent_genome) {
+    // One block per individuals
+    auto indiv_idx = blockIdx.x;
+    auto idx = threadIdx.x;
+    auto rr_width = blockDim.x;
+
+    if (indiv_idx >= nb_indivs) {
+        return;
+    }
+
+    __shared__ const char* parent_genome;
+    __shared__ char* child_genome;
+    __shared__ uint size;
+
+    if (threadIdx.x == 0) {
+        auto& child = individuals[indiv_idx];
+        // size do not change, what a chance !
+        size = child.size;
+        auto offset = reproducers[indiv_idx] * (child.size + PROM_SIZE); // Do not forget phantom space
+        parent_genome = all_parent_genome + offset;
+        child_genome = child.genome;
+    }
+    __syncthreads();
+
+    for (int position = idx; position < size; position += rr_width) {
+        child_genome[position] = parent_genome[position];
+    }
+}
+
+__global__
+void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate, RandService* rand_service) {
+    // One thread per individual
+    auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (indiv_idx >= nb_indivs)
+        return;
+
+    auto& indiv = individuals[indiv_idx];
+    auto nb_switch = rand_service->binomial_random(indiv.size, mutation_rate, indiv_idx, MUTATION);
+
+    printf("indiv %u perform %d switch\n", indiv_idx, nb_switch);
+
+    for (int i = 0; i < nb_switch; ++i) {
+        auto position = rand_service->gen_number_max(indiv.size, indiv_idx, MUTATION);
+        if (indiv.genome[position] == '0') indiv.genome[position] = '1';
+        else indiv.genome[position] = '0';
+        if (indiv_idx == 6) {
+            printf("indiv %u perform switch at position %d\n", indiv_idx, position);
+        }
+    }
+
+    __syncthreads();
+    if (indiv_idx == 0) {
+        for (int i = 0; i < rand_service->phase_size * NPHASES; ++i) {
+            printf("%lu|", rand_service->rng_counters[i]);
+        }
+        printf("\n");
+    }
+}
+
+
+__global__
 void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double* target) {
-    // one block per individual
+    // One block per individual
     auto indiv_idx = blockIdx.x;
     if (indiv_idx < nb_indivs) {
         individuals[indiv_idx].evaluate(target);
@@ -116,12 +181,24 @@ void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double
 }
 
 void cuExpManager::run_a_step() {
+    auto threads_per_block = 64; // arbitrary but better if multiple of 32
     // Selection
+    dim3 bloc_dim(threads_per_block / 2, threads_per_block / 2);
+    dim3 grid_dim(ceil(grid_width_ / bloc_dim.x), ceil(grid_height_ / bloc_dim.y));
+    selection<<<grid_dim, bloc_dim>>>(grid_height_,
+                                      grid_width_,
+                                      device_organisms_,
+                                      rand_service_,
+                                      reproducers_);
+    // Reproduction
+    reproduction<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, reproducers_, all_parent_dna_);
 
     // Mutation
+    uint grid_dim_1d = ceil(nb_indivs_ / threads_per_block);
+    do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
 
     // Evaluation
-    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
+    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -133,16 +210,20 @@ void cuExpManager::run_evolution(int nb_gen) {
     auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     cout << "Transfer done in " << duration_transfer_in << " µs" << endl;
 
-    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
-    cudaDeviceSynchronize();
-    checkCuda(cudaGetLastError());
+//    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
+//    cudaDeviceSynchronize();
+//    checkCuda(cudaGetLastError());
 
-    dim3 bloc_dim(3, 3);
-    selection<<<1, bloc_dim>>>(grid_height_,
-                               grid_width_,
-                               device_organisms_,
-                               rand_service_,
-                               next_generation_reproducer_);
+//    dim3 bloc_dim(3, 3);
+//    selection<<<1, bloc_dim>>>(grid_height_,
+//                               grid_width_,
+//                               device_organisms_,
+//                               rand_service_,
+//                               reproducers_);
+//    cudaDeviceSynchronize();
+//    checkCuda(cudaGetLastError());
+
+    do_mutation<<<1, 9>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
     cudaDeviceSynchronize();
     checkCuda(cudaGetLastError());
 
@@ -236,6 +317,7 @@ void cuExpManager::transfer_to_device() {
     auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
 
     checkCuda(cudaMalloc(&(all_genomes), all_genomes_size_w_phantom * sizeof(char)));
+    checkCuda(cudaMalloc(&(all_parent_dna_), all_genomes_size_w_phantom * sizeof(char)));
 
     uint8_t* all_promoters;
     uint* all_terminators;
@@ -265,16 +347,15 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMemcpy(device_target_, target_, FUZZY_SAMPLING * sizeof(double), cudaMemcpyHostToDevice));
 
     // Allocate memory for reproduction data
-    checkCuda(cudaMalloc(&(next_generation_reproducer_), nb_indivs_ * sizeof(int)));
+    checkCuda(cudaMalloc(&(reproducers_), nb_indivs_ * sizeof(int)));
 
     // Initiate Random Number generator
     RandService tmp;
     checkCuda(cudaMalloc(&(tmp.rng_counters), nb_counter_ * sizeof(ctr_value_type)));
     checkCuda(cudaMemcpy(tmp.rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
     tmp.seed = {{0, seed_}};
-    tmp.nb_phase = NPHASES;
     tmp.phase_size = nb_indivs_;
-    assert(nb_counter_ == tmp.phase_size * tmp.nb_phase);
+    assert(nb_counter_ == tmp.phase_size * NPHASES);
 
     checkCuda(cudaMalloc(&(rand_service_), sizeof(RandService)));
     checkCuda(cudaMemcpy(rand_service_, &tmp, sizeof(RandService), cudaMemcpyHostToDevice));
