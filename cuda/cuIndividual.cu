@@ -12,6 +12,12 @@
 __device__ void cuIndividual::evaluate(const double* target) {
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
+
+    if (idx == 0) {
+        clean_metadata();
+    }
+    __syncthreads();
+
     for (uint position = idx; position < size; position += rr_width) {
         const char *genome_at_pos = genome + position;
 
@@ -52,6 +58,26 @@ __device__ void cuIndividual::evaluate(const double* target) {
     compute_phenotype();
     __syncthreads();
     compute_fitness(target);
+    __syncthreads();
+}
+
+__device__ void cuIndividual::clean_metadata() {
+    nb_terminator = 0;
+    nb_prot_start = 0;
+    nb_gene = 0;
+
+    fitness = 0.0;
+
+    for (int i = 0; i < nb_rnas; ++i) {
+        if (list_rnas[i].list_gene) delete[] list_rnas[i].list_gene;
+        list_rnas[i].list_gene = nullptr;
+    }
+    nb_rnas = 0;
+
+    if (list_gene) delete[] list_gene;
+    list_gene = nullptr;
+    if (list_protein) delete[] list_protein;
+    list_protein = nullptr;
 }
 
 __device__ void cuIndividual::prepare_rnas() {
@@ -196,6 +222,12 @@ __device__ void cuIndividual::compute_phenotype() {
     auto rr_width = blockDim.x;
     
     __shared__ double phenotype_activ_inhib[2][FUZZY_SAMPLING]; // { activ_phenotype, inhib_phenotype }
+    // Initialize activation and inhibition to zero
+    for (int i = idx; i < FUZZY_SAMPLING; i += rr_width) {
+        phenotype_activ_inhib[0][i] = 0;
+        phenotype_activ_inhib[1][i] = 0;
+    }
+    __syncthreads();
 
     for (int protein_idx = idx; protein_idx < nb_gene; protein_idx += rr_width) {
         auto& protein = list_protein[protein_idx];
@@ -228,7 +260,6 @@ __device__ void cuIndividual::compute_phenotype() {
                 phenotype_activ_inhib[activ_inhib][i] += (triangle_slope * count);
                 count++;
             }
-            //atomicAdd(&phenotype_activ_inhib[activ_inhib][i_mid_absc], height);
 
             // Compute the second equation of the triangle
             triangle_slope = height / (double)(i_right_absc - i_mid_absc);
@@ -280,7 +311,7 @@ __device__ void cuIndividual::compute_fitness(const double* target) {
 }
 
 // ************ PRINTING
-#define PRINT_HEADER(STRING)  printf("\n<%s>\n", STRING)
+#define PRINT_HEADER(STRING)  printf("<%s>\n", STRING)
 #define PRINT_CLOSING(STRING) printf("</%s>\n", STRING)
 
 __device__ void cuIndividual::print_metadata_summary() const {
@@ -328,7 +359,7 @@ __device__ void cuIndividual::print_gathered_genes() const {
     if (threadIdx.x == 0) {
         PRINT_HEADER("GENES");
         uint nb_gene = 0;
-        for (int i = 0; i < nb_gene; ++i) {// is LEADING
+        for (int i = 0; i < nb_gene; ++i) {
             auto start = list_gene[i].start;
             nb_gene++;
             printf("\t%d: concentration: %d\n", start, list_gene[i].concentration);

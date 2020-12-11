@@ -44,6 +44,8 @@ struct cuIndividual {
 
     __device__ void compute_fitness(const double* target);
 
+    __device__ void clean_metadata();
+
     inline __device__ uint get_distance(uint a, uint b) const {
         if (a > b)
             return (b + size) - a;
