@@ -21,12 +21,12 @@ inline R123_CUDA_DEVICE double int64_to_double(int64_t number) {
 }
 
 struct RandService {
-    RNG generator;
+    RNG generator{};
 
-    uint phase_size;
+    uint phase_size{};
 
-    key_type seed;
-    ctr_value_type* rng_counters;
+    key_type seed{};
+    ctr_value_type* rng_counters{};
 
     inline R123_CUDA_DEVICE ctr_value_type gen_number(uint idx, Phase phase) {
         auto counter_idx = idx + phase_size * phase;

@@ -54,11 +54,11 @@ __device__ void cuIndividual::evaluate(const double* target) {
     for (uint gene_idx = idx; gene_idx < nb_gene; gene_idx += rr_width) {
         translate_gene(gene_idx);
     }
-//    __syncthreads();
-//    compute_phenotype();
-//    __syncthreads();
-//    compute_fitness(target);
-//    __syncthreads();
+    __syncthreads();
+    compute_phenotype();
+    __syncthreads();
+    compute_fitness(target);
+    __syncthreads();
 }
 
 __device__ void cuIndividual::clean_metadata() {
@@ -150,7 +150,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     // Let us put their position in a list
 
     rna.nb_gene = local_nb_gene;
-    rna.list_gene = new cuGene[rna.nb_gene];
+    rna.list_gene = new cuGene[local_nb_gene]{};
     for (int i = 0; i < rna.nb_gene; ++i) {
         uint start = list_ps[first_next_ps] + SD_TO_START;
         if (start >= size) {
@@ -173,8 +173,8 @@ __device__ void cuIndividual::gather_genes() {
         nb_gene += list_rnas[idx_rna].nb_gene;
     }
 
-    list_gene = new cuGene[nb_gene];
-    list_protein = new cuProtein[nb_gene];
+    list_gene = new cuGene[nb_gene]{};
+    list_protein = new cuProtein[nb_gene]{};
     uint insert_idx = 0;
 
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
@@ -371,10 +371,9 @@ __device__ void cuIndividual::print_gathered_genes() const {
         PRINT_HEADER("GENES");
         uint local_nb_gene = 0;
         for (int i = 0; i < local_nb_gene; ++i) {
-            auto start = list_gene[i].start;
             local_nb_gene++;
             printf("\t%d: concentration: %d, limit: %d\n",
-                   start, list_gene[i].concentration, list_gene[i].length_limit);
+                   list_gene[i].start, list_gene[i].concentration, list_gene[i].length_limit);
         }
 
         printf("\nnumber of potential gene: %u\n", local_nb_gene);

@@ -186,11 +186,9 @@ void swap_parent_child_genome_d(uint nb_indivs, cuIndividual* individuals, char*
 __global__
 void check_result(uint nb_indivs, cuIndividual* individuals) {
     for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
-        auto indiv = individuals[indiv_idx];
+        auto& indiv = individuals[indiv_idx];
         printf("INDIVIDUAL %d\n", indiv_idx);
-        indiv.print_gathered_genes();
-        indiv.print_proteins();
-//        printf("\tfitness: %1.10e\n", indiv.fitness);
+        printf("\tfitness: %1.10e\n", indiv.fitness);
     }
 }
 
@@ -302,6 +300,16 @@ void init_device_population(int nb_indivs, int dna_length, cuIndividual* all_ind
         local_indiv.terminators = all_terminators + offset;
         local_indiv.prot_start = all_prot_start + offset;
         local_indiv.list_rnas = all_rnas + offset;
+        local_indiv.nb_terminator = 0;
+        local_indiv.nb_prot_start = 0;
+        local_indiv.nb_rnas = 0;
+        local_indiv.nb_gene = 0;
+        local_indiv.list_gene = nullptr;
+        local_indiv.list_protein = nullptr;
+        local_indiv.fitness = 0.0;
+        for (int j = 0; j < FUZZY_SAMPLING; ++j) {
+            local_indiv.phenotype[j] = 0.0;
+        }
     }
 //    __syncthreads();
 //    if (idx == 0) {

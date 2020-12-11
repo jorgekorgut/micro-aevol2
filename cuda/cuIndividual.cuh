@@ -11,20 +11,20 @@
 
 struct cuGene {
     // value function of the error of the RNA hosting the gene
-    uint8_t concentration;
+    uint8_t concentration{};
     // position at which translation will start, after the START
-    uint start;
+    uint start{};
     // position of the terminators of the RNA
-    uint length_limit;
+    uint length_limit{};
 };
 
 struct cuRNA {
-    uint8_t errors;
-    uint start_transcription;
-    uint transcription_length;
+    uint8_t errors{};
+    uint start_transcription{};
+    uint transcription_length{};
 
-    uint nb_gene;
-    cuGene *list_gene;
+    uint nb_gene{};
+    cuGene *list_gene{};
 };
 
 struct cuIndividual {
@@ -69,21 +69,21 @@ struct cuIndividual {
 
     __device__ void print_phenotype() const;
 
-    uint size;
-    char *genome;
-    uint8_t *promoters;
-    uint nb_terminator;
-    uint *terminators;
-    uint nb_prot_start;
-    uint *prot_start;
+    uint size{};
+    char *genome{};
+    uint8_t *promoters{};
+    uint nb_terminator{};
+    uint *terminators{};
+    uint nb_prot_start{};
+    uint *prot_start{};
 
-    uint nb_rnas;
-    cuRNA *list_rnas;
+    uint nb_rnas{};
+    cuRNA *list_rnas{};
 
-    uint nb_gene;
-    cuGene *list_gene;
-    cuProtein *list_protein;
+    uint nb_gene{};
+    cuGene *list_gene{};
+    cuProtein *list_protein{};
 
     double phenotype[FUZZY_SAMPLING]{};
-    double fitness;
+    double fitness{};
 };
