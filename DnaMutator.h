@@ -53,8 +53,6 @@ public:
 
     MutationEvent *generate_next_mutation(int length);
 
-    bool mutation_available() const { return (cpt_mut_ > 0); }
-
     std::list<MutationEvent *> mutation_list_;
 
     bool hasMutate() const { return hasMutate_; }
@@ -68,10 +66,7 @@ public:
     double mutation_rate_;
 
     //--------------------------- Mutation counters
-    int nb_swi_{};
     int nb_mut_{};
-
-    int cpt_mut_{};
     bool hasMutate_ = false;
 };
 

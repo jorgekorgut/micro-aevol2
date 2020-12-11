@@ -46,17 +46,13 @@ DnaMutator::DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate
  */
 void DnaMutator::generate_mutations() {
     hasMutate_ = false;
-    nb_swi_ = mut_prng_->binomial_random(length_, mutation_rate_);
-    nb_mut_ = nb_swi_;
-    cpt_mut_ = nb_mut_;
+    nb_mut_ = mut_prng_->binomial_random(length_, mutation_rate_);
 
     if (nb_mut_ > 0) {
-        do {
+        for (int i = 0; i < nb_mut_; ++i) {
             generate_next_mutation(length_);
-        } while (mutation_available() > 0);
-
-        if (!mutation_list_.empty())
-            hasMutate_ = true;
+        }
+        hasMutate_ = true;
     }
 }
 
@@ -67,24 +63,10 @@ void DnaMutator::generate_mutations() {
  * @return The generated mutation event (or nullptr if none was created)
  */
 MutationEvent *DnaMutator::generate_next_mutation(int length) {
-    int random_value;
-    MutationEvent *mevent = nullptr;
+    int pos = mut_prng_->random(length);
 
-    if (cpt_mut_ > 0) {
-        random_value = mut_prng_->random(cpt_mut_);
-        cpt_mut_--;
-
-        if (random_value < nb_swi_) {
-            nb_swi_--;
-
-            int pos = mut_prng_->random(length);
-
-            mevent = new MutationEvent();
-            mevent->switch_pos(pos);
-            mutation_list_.push_back(mevent);
-
-        }
-    }
-
+    auto mevent = new MutationEvent();
+    mevent->switch_pos(pos);
+    mutation_list_.push_back(mevent);
     return mevent;
 };
