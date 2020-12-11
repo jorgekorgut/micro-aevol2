@@ -26,8 +26,13 @@ using namespace std;
                 cudaGetErrorString(result), __FILE__, __LINE__); \
         assert(result == cudaSuccess); \
     } }
+
+#define CHECK_KERNEL \
+cudaDeviceSynchronize(); \
+checkCuda(cudaGetLastError());
 #else
 #define checkCuda(X) X
+#define CHECK_KERNEL
 #endif
 
 cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
@@ -74,7 +79,6 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
     double local_fit_array[NEIGHBORHOOD_SIZE];
     int count = 0;
     double sum_local_fit = 0.0;
-
 
     for (int8_t i = -1; i < NEIGHBORHOOD_WIDTH - 1; i++) {
         for (int8_t j = -1; j < NEIGHBORHOOD_HEIGHT - 1; j++) {
@@ -130,7 +134,7 @@ void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproduc
     }
     __syncthreads();
 
-    for (int position = idx; position < size; position += rr_width) {
+    for (int position = idx; position < size + PROM_SIZE; position += rr_width) { // Do not forget phantom space
         child_genome[position] = parent_genome[position];
     }
 }
@@ -145,23 +149,15 @@ void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate
     auto& indiv = individuals[indiv_idx];
     auto nb_switch = rand_service->binomial_random(indiv.size, mutation_rate, indiv_idx, MUTATION);
 
-    printf("indiv %u perform %d switch\n", indiv_idx, nb_switch);
-
     for (int i = 0; i < nb_switch; ++i) {
         auto position = rand_service->gen_number_max(indiv.size, indiv_idx, MUTATION);
         if (indiv.genome[position] == '0') indiv.genome[position] = '1';
         else indiv.genome[position] = '0';
-        if (indiv_idx == 6) {
-            printf("indiv %u perform switch at position %d\n", indiv_idx, position);
-        }
-    }
 
-    __syncthreads();
-    if (indiv_idx == 0) {
-        for (int i = 0; i < rand_service->phase_size * NPHASES; ++i) {
-            printf("%lu|", rand_service->rng_counters[i]);
-        }
-        printf("\n");
+        if (position < PROM_SIZE) // Do not forget phantom space
+            indiv.genome[position + indiv.size] = indiv.genome[position];
+
+        printf("indiv %u switch at %d\n", indiv_idx, position);
     }
 }
 
@@ -173,32 +169,68 @@ void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double
     if (indiv_idx < nb_indivs) {
         individuals[indiv_idx].evaluate(target);
     }
-    if (indiv_idx == 0) {
-        if (threadIdx.x == 0) {
-            printf("Fitness: %0.10e\n", individuals[0].fitness);
-        }
+}
+
+__global__
+void swap_parent_child_genome_d(uint nb_indivs, cuIndividual* individuals, char* all_parent_genome) {
+    // One thread per individual
+    auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (indiv_idx >= nb_indivs)
+        return;
+
+    auto& indiv = individuals[indiv_idx];
+    auto offset = indiv_idx * (indiv.size + PROM_SIZE); // Do not forget phantom space
+    indiv.genome = all_parent_genome + offset;
+}
+
+__global__
+void check_result(uint nb_indivs, cuIndividual* individuals) {
+    for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
+        auto indiv = individuals[indiv_idx];
+        printf("INDIVIDUAL %d\n", indiv_idx);
+        printf("\tfitness: %1.10e\n", indiv.fitness);
     }
 }
 
 void cuExpManager::run_a_step() {
-    auto threads_per_block = 64; // arbitrary but better if multiple of 32
+    auto threads_per_block = 64; // arbitrary : better if multiple of 32
     // Selection
     dim3 bloc_dim(threads_per_block / 2, threads_per_block / 2);
-    dim3 grid_dim(ceil(grid_width_ / bloc_dim.x), ceil(grid_height_ / bloc_dim.y));
+    auto grid_x = ceil((float) grid_width_ / (float) bloc_dim.x);
+    auto grid_y = ceil((float) grid_height_ / (float) bloc_dim.y);
+    dim3 grid_dim(grid_x, grid_y);
     selection<<<grid_dim, bloc_dim>>>(grid_height_,
                                       grid_width_,
                                       device_organisms_,
                                       rand_service_,
                                       reproducers_);
+    CHECK_KERNEL
+
     // Reproduction
     reproduction<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, reproducers_, all_parent_dna_);
+    CHECK_KERNEL
 
     // Mutation
-    uint grid_dim_1d = ceil(nb_indivs_ / threads_per_block);
+    auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
     do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
+    CHECK_KERNEL
+
+    printf("--MUTATION--\n");
+    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+    CHECK_KERNEL
 
     // Evaluation
     evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
+    CHECK_KERNEL
+
+    // Swap genome information
+    swap_parent_child_genome_d<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
+    CHECK_KERNEL
+    swap(all_parent_dna_, all_child_dna_);
+
+//    printf("--END--\n");
+//    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+//    CHECK_KERNEL
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -210,39 +242,36 @@ void cuExpManager::run_evolution(int nb_gen) {
     auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
     cout << "Transfer done in " << duration_transfer_in << " µs" << endl;
 
-//    evaluate_population<<<nb_indivs_, 32>>>(nb_indivs_, device_organisms_, device_target_);
-//    cudaDeviceSynchronize();
-//    checkCuda(cudaGetLastError());
-
-//    dim3 bloc_dim(3, 3);
-//    selection<<<1, bloc_dim>>>(grid_height_,
-//                               grid_width_,
-//                               device_organisms_,
-//                               rand_service_,
-//                               reproducers_);
-//    cudaDeviceSynchronize();
-//    checkCuda(cudaGetLastError());
-
-    do_mutation<<<1, 9>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
-    cudaDeviceSynchronize();
-    checkCuda(cudaGetLastError());
+    // Evaluation of population at generation 0
+    auto threads_per_block = 64;
+    auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
+    for (int i = 0; i < 5; ++i) {
+        printf("Evaluation n°%d\n", i);
+        evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
+        CHECK_KERNEL
+        check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+        CHECK_KERNEL
+    }
+//    swap_parent_child_genome_d<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
+//    CHECK_KERNEL
+//    swap(all_parent_dna_, all_child_dna_);
+//    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+//    CHECK_KERNEL
 
 //    printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
-//    bool firstGen = true;
-//    for (int gen = 0; gen < nb_gen+1; gen++) {
+//    for (int gen = 0; gen < nb_gen; gen++) {
 //        if(gen == 91) nvtxRangePushA("generation 91 to 100");
 //        AeTime::plusplus();
 //
-//        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+////        high_resolution_clock::time_point t1 = high_resolution_clock::now();
 //        run_a_step();
 //
-//        t2 = high_resolution_clock::now();
-//        auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+////        t2 = high_resolution_clock::now();
+////        auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
 //
-//        std::cout<<"LOG,"<<duration_transfer_in<<std::endl;
+////        std::cout<<"LOG,"<<duration_transfer_in<<std::endl;
 //
-//        firstGen = false;
-//        if(gen == 100) nvtxRangePop();
+////        if(gen == 100) nvtxRangePop();
 //        printf("Generation %d : \n",AeTime::time());
 //    }
 //    cudaProfilerStop();
@@ -311,12 +340,11 @@ void check_target(double* target) {
 void cuExpManager::transfer_to_device() {
     // Allocate memory for individuals in device world
     checkCuda(cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual)));
-    char* all_genomes;
     auto all_genomes_size = nb_indivs_ * dna_length_;
     // For each genome, we add a phantom space at the end.
     auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
 
-    checkCuda(cudaMalloc(&(all_genomes), all_genomes_size_w_phantom * sizeof(char)));
+    checkCuda(cudaMalloc(&(all_child_dna_), all_genomes_size_w_phantom * sizeof(char)));
     checkCuda(cudaMalloc(&(all_parent_dna_), all_genomes_size_w_phantom * sizeof(char)));
 
     uint8_t* all_promoters;
@@ -331,16 +359,15 @@ void cuExpManager::transfer_to_device() {
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
         auto offset = dna_length_ + PROM_SIZE;
-        auto indiv_genome_pointer = all_genomes + (i * offset);
+        auto indiv_genome_pointer = all_child_dna_ + (i * offset);
         auto indiv_genome_phantom_pointer = indiv_genome_pointer + dna_length_;
         checkCuda(cudaMemcpy(indiv_genome_pointer, host_organisms_[i], dna_length_, cudaMemcpyHostToDevice));
         checkCuda(cudaMemcpy(indiv_genome_phantom_pointer, host_organisms_[i], PROM_SIZE, cudaMemcpyHostToDevice));
     }
 
-    init_device_population<<<1, 1>>>(nb_indivs_, dna_length_, device_organisms_, all_genomes,
+    init_device_population<<<1, 1>>>(nb_indivs_, dna_length_, device_organisms_, all_child_dna_,
                                      all_promoters, all_terminators, all_prot_start, all_rnas);
-//    cudaDeviceSynchronize();
-//    checkCuda(cudaGetLastError());
+    CHECK_KERNEL
 
     // Transfer phenotypic target
     checkCuda(cudaMalloc(&(device_target_), FUZZY_SAMPLING * sizeof(double)));
@@ -362,6 +389,5 @@ void cuExpManager::transfer_to_device() {
 
 //    check_rng<<<1, 1>>>(rand_service_);
 //    check_target<<<1, 1>>>(device_target_);
-    cudaDeviceSynchronize();
-    checkCuda(cudaGetLastError());
+    CHECK_KERNEL
 }

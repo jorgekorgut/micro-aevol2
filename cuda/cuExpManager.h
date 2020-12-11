@@ -49,6 +49,7 @@ private:
 
     // Device data
     cuIndividual* device_organisms_;
+    char* all_child_dna_;
     char* all_parent_dna_;
 
     int* reproducers_;
