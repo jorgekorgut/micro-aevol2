@@ -188,7 +188,9 @@ void check_result(uint nb_indivs, cuIndividual* individuals) {
     for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
         auto indiv = individuals[indiv_idx];
         printf("INDIVIDUAL %d\n", indiv_idx);
-        printf("\tfitness: %1.10e\n", indiv.fitness);
+        indiv.print_gathered_genes();
+        indiv.print_proteins();
+//        printf("\tfitness: %1.10e\n", indiv.fitness);
     }
 }
 
@@ -245,7 +247,7 @@ void cuExpManager::run_evolution(int nb_gen) {
     // Evaluation of population at generation 0
     auto threads_per_block = 64;
     auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 3; ++i) {
         printf("Evaluation n°%d\n", i);
         evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
         CHECK_KERNEL

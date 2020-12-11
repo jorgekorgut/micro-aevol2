@@ -54,14 +54,15 @@ __device__ void cuIndividual::evaluate(const double* target) {
     for (uint gene_idx = idx; gene_idx < nb_gene; gene_idx += rr_width) {
         translate_gene(gene_idx);
     }
-    __syncthreads();
-    compute_phenotype();
-    __syncthreads();
-    compute_fitness(target);
-    __syncthreads();
+//    __syncthreads();
+//    compute_phenotype();
+//    __syncthreads();
+//    compute_fitness(target);
+//    __syncthreads();
 }
 
 __device__ void cuIndividual::clean_metadata() {
+    // One thread working alone
     nb_terminator = 0;
     nb_prot_start = 0;
     nb_gene = 0;
@@ -69,7 +70,8 @@ __device__ void cuIndividual::clean_metadata() {
     fitness = 0.0;
 
     for (int i = 0; i < nb_rnas; ++i) {
-        if (list_rnas[i].list_gene) delete[] list_rnas[i].list_gene;
+        auto* local_list_gene = list_rnas[i].list_gene;
+        if (local_list_gene) delete[] local_list_gene;
         list_rnas[i].list_gene = nullptr;
     }
     nb_rnas = 0;
@@ -81,6 +83,7 @@ __device__ void cuIndividual::clean_metadata() {
 }
 
 __device__ void cuIndividual::prepare_rnas() {
+    // One thread working alone
     int insert_position = 0;
 
     for (uint read_position = 0; read_position < size; ++read_position) {
@@ -99,6 +102,7 @@ __device__ void cuIndividual::prepare_rnas() {
 }
 
 __device__ void cuIndividual::compute_rna(uint rna_idx) const {
+    // One thread
     auto &rna = list_rnas[rna_idx];
     uint start_transcript = rna.start_transcription;
 
@@ -114,6 +118,7 @@ __device__ void cuIndividual::compute_rna(uint rna_idx) const {
 }
 
 __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
+    // One thread
     auto &rna = list_rnas[rna_idx];
     if (rna.errors > PROM_MAX_DIFF) {
         rna.nb_gene = 0;
@@ -126,7 +131,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
         return;
     }
     uint *list_ps = prot_start;
-    uint nb_gene = 0;
+    uint local_nb_gene = 0;
 
     // Correctly setup the research
     uint max_distance = rna.transcription_length - DO_TRANSLATION_LOOP;
@@ -135,7 +140,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
 
     uint distance = get_distance(rna.start_transcription, list_ps[ps_idx]);
     while (distance <= max_distance) {
-        nb_gene++;
+        local_nb_gene++;
         uint prev_idx = ps_idx++;
         if (ps_idx == nb_ps)
             ps_idx = 0;
@@ -144,15 +149,16 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     // all potential genes are counted
     // Let us put their position in a list
 
-    rna.nb_gene = nb_gene;
-    rna.list_gene = nb_gene ? new cuGene[nb_gene] : nullptr;
-    for (int i = 0; i < nb_gene; ++i) {
+    rna.nb_gene = local_nb_gene;
+    rna.list_gene = new cuGene[rna.nb_gene];
+    for (int i = 0; i < rna.nb_gene; ++i) {
         uint start = list_ps[first_next_ps] + SD_TO_START;
         if (start >= size) {
             start -= size;
         }
 
         rna.list_gene[i].start = start;
+        rna.list_gene[i].concentration = PROM_MAX_DIFF + 1 - rna.errors;
         rna.list_gene[i].length_limit = get_distance(rna.start_transcription, start);
         if (++first_next_ps >= nb_ps) {
             first_next_ps = 0;
@@ -161,6 +167,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
 }
 
 __device__ void cuIndividual::gather_genes() {
+    // One thread working alone
     nb_gene = 0;
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
         nb_gene += list_rnas[idx_rna].nb_gene;
@@ -171,10 +178,9 @@ __device__ void cuIndividual::gather_genes() {
     uint insert_idx = 0;
 
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
-        auto &rna = list_rnas[idx_rna];
+        const auto &rna = list_rnas[idx_rna];
         for (int i = 0; i < rna.nb_gene; ++i) {
             list_gene[insert_idx] = rna.list_gene[i];
-            list_gene[insert_idx].concentration = PROM_MAX_DIFF + 1 - rna.errors;
             // limit is difference between transcription_length and distance start_rna -> start_gen (computed in `prepare_gene`)
             list_gene[insert_idx].length_limit = rna.transcription_length - list_gene[insert_idx].length_limit;
             insert_idx++;
@@ -183,6 +189,7 @@ __device__ void cuIndividual::gather_genes() {
 }
 
 __device__ void cuIndividual::translate_gene(uint gene_idx) const {
+    // One thread
     const auto &gene = list_gene[gene_idx];
 
     uint max_distance = gene.length_limit;
@@ -220,6 +227,7 @@ __device__ void cuIndividual::translate_gene(uint gene_idx) const {
 }
 
 __device__ void cuIndividual::compute_phenotype() {
+    // One block
     auto idx = threadIdx.x;
     auto rr_width = blockDim.x;
     
@@ -285,6 +293,7 @@ __device__ void cuIndividual::compute_phenotype() {
 }
 
 __device__ void cuIndividual::compute_fitness(const double* target) {
+    // One block
     auto idx = threadIdx.x;
     auto rr_width = blockDim.x;
 
@@ -360,14 +369,15 @@ __device__ void cuIndividual::print_gathered_genes() const {
     __syncthreads();
     if (threadIdx.x == 0) {
         PRINT_HEADER("GENES");
-        uint nb_gene = 0;
-        for (int i = 0; i < nb_gene; ++i) {
+        uint local_nb_gene = 0;
+        for (int i = 0; i < local_nb_gene; ++i) {
             auto start = list_gene[i].start;
-            nb_gene++;
-            printf("\t%d: concentration: %d\n", start, list_gene[i].concentration);
+            local_nb_gene++;
+            printf("\t%d: concentration: %d, limit: %d\n",
+                   start, list_gene[i].concentration, list_gene[i].length_limit);
         }
 
-        printf("\nnumber of potential gene: %u\n", nb_gene);
+        printf("\nnumber of potential gene: %u\n", local_nb_gene);
         PRINT_CLOSING("GENES");
     }
     __syncthreads();
