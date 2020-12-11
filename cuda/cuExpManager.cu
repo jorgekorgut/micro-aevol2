@@ -172,7 +172,7 @@ void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double
 }
 
 __global__
-void swap_parent_child_genome_d(uint nb_indivs, cuIndividual* individuals, char* all_parent_genome) {
+void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* all_parent_genome) {
     // One thread per individual
     auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (indiv_idx >= nb_indivs)
@@ -186,10 +186,10 @@ void swap_parent_child_genome_d(uint nb_indivs, cuIndividual* individuals, char*
 __global__
 void check_result(uint nb_indivs, cuIndividual* individuals) {
     for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
-        auto& indiv = individuals[indiv_idx];
-        printf("INDIVIDUAL %d\n", indiv_idx);
-        printf("\tfitness: %1.10e\n", indiv.fitness);
+        const auto& indiv = individuals[indiv_idx];
+        printf("%d: %1.10e | ", indiv_idx, indiv.fitness);
     }
+    printf("\n");
 }
 
 void cuExpManager::run_a_step() {
@@ -215,22 +215,17 @@ void cuExpManager::run_a_step() {
     do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
     CHECK_KERNEL
 
-    printf("--MUTATION--\n");
-    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
-    CHECK_KERNEL
-
     // Evaluation
     evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
     CHECK_KERNEL
 
     // Swap genome information
-    swap_parent_child_genome_d<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
     CHECK_KERNEL
     swap(all_parent_dna_, all_child_dna_);
 
-//    printf("--END--\n");
-//    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
-//    CHECK_KERNEL
+    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+    CHECK_KERNEL
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -244,37 +239,31 @@ void cuExpManager::run_evolution(int nb_gen) {
 
     // Evaluation of population at generation 0
     auto threads_per_block = 64;
-    auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
-    for (int i = 0; i < 3; ++i) {
-        printf("Evaluation n°%d\n", i);
-        evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
-        CHECK_KERNEL
-        check_result<<<1,1>>>(nb_indivs_, device_organisms_);
-        CHECK_KERNEL
-    }
-//    swap_parent_child_genome_d<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
-//    CHECK_KERNEL
-//    swap(all_parent_dna_, all_child_dna_);
-//    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
-//    CHECK_KERNEL
+    auto grid_dim_1d = ceil((float) nb_indivs_ / (float) threads_per_block);
+    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
+    CHECK_KERNEL
+    swap(all_parent_dna_, all_child_dna_);
+    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+    CHECK_KERNEL
 
-//    printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
-//    for (int gen = 0; gen < nb_gen; gen++) {
-//        if(gen == 91) nvtxRangePushA("generation 91 to 100");
-//        AeTime::plusplus();
-//
-////        high_resolution_clock::time_point t1 = high_resolution_clock::now();
-//        run_a_step();
-//
-////        t2 = high_resolution_clock::now();
-////        auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
-//
-////        std::cout<<"LOG,"<<duration_transfer_in<<std::endl;
-//
-////        if(gen == 100) nvtxRangePop();
-//        printf("Generation %d : \n",AeTime::time());
-//    }
-//    cudaProfilerStop();
+    printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
+    for (int gen = 0; gen < nb_gen; gen++) {
+        if(gen == 91) nvtxRangePushA("generation 91 to 100");
+        AeTime::plusplus();
+
+//        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+        run_a_step();
+
+//        t2 = high_resolution_clock::now();
+//        auto duration_transfer_in = std::chrono::duration_cast<std::chrono::microseconds>( t2 - t1 ).count();
+
+//        std::cout<<"LOG,"<<duration_transfer_in<<std::endl;
+
+//        if(gen == 100) nvtxRangePop();
+        printf("Generation %d : \n",AeTime::time());
+    }
+    cudaProfilerStop();
 }
 
 void cuExpManager::save(int t) {
