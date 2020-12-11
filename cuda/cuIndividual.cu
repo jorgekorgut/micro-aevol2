@@ -153,6 +153,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
         }
 
         rna.list_gene[i].start = start;
+        rna.list_gene[i].length_limit = get_distance(rna.start_transcription, start);
         if (++first_next_ps >= nb_ps) {
             first_next_ps = 0;
         }
@@ -174,7 +175,8 @@ __device__ void cuIndividual::gather_genes() {
         for (int i = 0; i < rna.nb_gene; ++i) {
             list_gene[insert_idx] = rna.list_gene[i];
             list_gene[insert_idx].concentration = PROM_MAX_DIFF + 1 - rna.errors;
-            list_gene[insert_idx].length_limit = rna.transcription_length;
+            // limit is difference between transcription_length and distance start_rna -> start_gen (computed in `prepare_gene`)
+            list_gene[insert_idx].length_limit = rna.transcription_length - list_gene[insert_idx].length_limit;
             insert_idx++;
         }
     }
