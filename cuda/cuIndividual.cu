@@ -6,8 +6,6 @@
 #include "misc_functions.cuh"
 
 #include <cstdio>
-#include <cuda.h>
-#include <cuda_runtime_api.h>
 
 __device__ void cuIndividual::evaluate(const double* target) {
     uint idx = threadIdx.x;
