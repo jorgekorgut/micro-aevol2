@@ -18,7 +18,7 @@ public:
 
     static void create_directory();
 
-    virtual void save(int t) = 0;
+    virtual void save(int t) const = 0;
 
     virtual void load(int t) = 0;
 

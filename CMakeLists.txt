@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 3.13)
 project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -9,6 +9,8 @@ if ( DO_TRACES )
 endif ( DO_TRACES )
 
 if ( USE_CUDA )
+    # https://cliutils.gitlab.io/modern-cmake/chapters/packages/CUDA.html
+    find_package(CUDA REQUIRED)
     include(CheckLanguage)
     check_language(CUDA)
     if(CMAKE_CUDA_COMPILER)

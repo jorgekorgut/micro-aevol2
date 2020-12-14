@@ -18,9 +18,9 @@ public:
 
     void run_evolution(int nb_gen) override;
 
-    void save(int t) override;
+    void save(int t) const final;
 
-    void load(int t) override;
+    void load(int t) final;
 
 private:
     void run_a_step();

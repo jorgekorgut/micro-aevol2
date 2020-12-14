@@ -10,6 +10,7 @@
 #include <cmath>
 #include "nvToolsExt.h"
 #include <cuda_profiler_api.h>
+#include <zlib.h>
 
 #include "AeTime.h"
 
@@ -258,12 +259,59 @@ void cuExpManager::run_evolution(int nb_gen) {
     cudaProfilerStop();
 }
 
-void cuExpManager::save(int t) {
-    printf("Oups, not supported !\n");
+void cuExpManager::save(int t) const {
+//    char exp_backup_file_name[255];
+//
+//    sprintf(exp_backup_file_name, "backup/backup_%d.zae", t);
+//
+//    // -------------------------------------------------------------------------
+//    // Open backup files
+//    // -------------------------------------------------------------------------
+//    gzFile exp_backup_file = gzopen(exp_backup_file_name, "w");
+//
+//
+//    // -------------------------------------------------------------------------
+//    // Check that files were correctly opened
+//    // -------------------------------------------------------------------------
+//    if (exp_backup_file == Z_NULL) {
+//        printf("Error: could not open backup file %s\n",
+//               exp_backup_file_name);
+//        exit(EXIT_FAILURE);
+//    }
+//
+//
+//    // -------------------------------------------------------------------------
+//    // Write the backup file
+//    // -------------------------------------------------------------------------
+//    gzwrite(exp_backup_file, &t, sizeof(t));
+//
+//    gzwrite(exp_backup_file, &grid_height_, sizeof(grid_height_));
+//    gzwrite(exp_backup_file, &grid_width_, sizeof(grid_width_));
+//
+//    gzwrite(exp_backup_file, &backup_step_, sizeof(backup_step_));
+//
+//    gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
+//
+//
+//
+//    for (int i = 0; i < FUZZY_SAMPLING; i++) {
+//        double tmp = target_[i];
+//        gzwrite(exp_backup_file, &tmp, sizeof(tmp));
+//    }
+//// TODO: transfer back device data to host
+//    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+//        prev_internal_organisms_[indiv_id]->save(exp_backup_file);
+//    }
+//
+//    rng_->save(exp_backup_file);
+//
+//    if (gzclose(exp_backup_file) != Z_OK) {
+//        cerr << "Error while closing backup file" << endl;
+//    }
 }
 
 void cuExpManager::load(int t) {
-    printf("Oups, not supported !\n");
+    // Unused method because we load data from ExpManager
 }
 
 __global__

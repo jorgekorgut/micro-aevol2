@@ -51,7 +51,7 @@ public:
 
     ~ExpManager() override;
 
-    void save(int t) final;
+    void save(int t) const final;
 
     void load(int t) final;
 

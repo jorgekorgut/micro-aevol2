@@ -27,6 +27,7 @@
 
 
 #include <iostream>
+#include <zlib.h>
 
 using namespace std;
 
@@ -155,7 +156,7 @@ ExpManager::ExpManager(int time) {
  *
  * @param t : simulated time of the checkpoint
  */
-void ExpManager::save(int t) {
+void ExpManager::save(int t) const {
 
     char exp_backup_file_name[255];
 
@@ -264,8 +265,6 @@ void ExpManager::load(int t) {
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id] =
                 std::make_shared<Organism>(exp_backup_file);
-        // promoters have to be recomputed, they are not save in the backup
-        internal_organisms_[indiv_id]->locate_promoters();
     }
 
     rng_ = std::move(std::make_unique<Threefry>(grid_width_, grid_height_, exp_backup_file));
@@ -402,7 +401,6 @@ void ExpManager::run_a_step() {
 
     stats_best->write_best(best_indiv);
     stats_mean->write_average(prev_internal_organisms_, nb_indivs_);
-
 }
 
 
@@ -413,6 +411,7 @@ void ExpManager::run_a_step() {
  */
 void ExpManager::run_evolution(int nb_gen) {
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+        internal_organisms_[indiv_id]->locate_promoters();
         prev_internal_organisms_[indiv_id]->evaluate(target);
         prev_internal_organisms_[indiv_id]->compute_protein_stats();
     }
