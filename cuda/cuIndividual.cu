@@ -148,7 +148,8 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     // Let us put their position in a list
 
     rna.nb_gene = local_nb_gene;
-    rna.list_gene = new cuGene[local_nb_gene]{};
+    if (local_nb_gene > 0)
+        rna.list_gene = new cuGene[local_nb_gene]{};
     for (int i = 0; i < rna.nb_gene; ++i) {
         uint start = list_ps[first_next_ps] + SD_TO_START;
         if (start >= size) {
@@ -170,9 +171,10 @@ __device__ void cuIndividual::gather_genes() {
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
         nb_gene += list_rnas[idx_rna].nb_gene;
     }
-
-    list_gene = new cuGene[nb_gene]{};
-    list_protein = new cuProtein[nb_gene]{};
+    if (nb_gene > 0) {
+        list_gene = new cuGene[nb_gene]{};
+        list_protein = new cuProtein[nb_gene]{};
+    }
     uint insert_idx = 0;
 
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {

@@ -32,6 +32,9 @@ void check_result(uint nb_indivs, cuIndividual* individuals);
 // Interface Host | Device
 
 __global__
+void clean_population_metadata(uint nb_indivs, cuIndividual* individuals);
+
+__global__
 void init_device_population(int nb_indivs, int genome_length, cuIndividual* all_individuals, char* all_genomes,
                             uint8_t* all_promoters, uint* all_terminators, uint* all_prot_start, cuRNA* all_rnas);
 

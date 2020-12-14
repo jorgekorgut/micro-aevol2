@@ -260,6 +260,7 @@ void cuExpManager::transfer_to_host() const {
 }
 
 void cuExpManager::device_data_destructor() {
+    clean_population_metadata<<<1, 1>>>(nb_indivs_, device_individuals_);
     RandService tmp_rand;
     checkCuda(cudaMemcpy(&tmp_rand, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
     checkCuda(cudaFree(tmp_rand.rng_counters));
@@ -413,6 +414,14 @@ void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* a
 }
 
 // Interface Host | Device
+
+__global__ void clean_population_metadata(uint nb_indivs, cuIndividual* individuals) {
+    if (threadIdx.x + blockIdx.x == 0) {
+        for (int i = 0; i < nb_indivs; ++i) {
+            individuals[i].clean_metadata();
+        }
+    }
+}
 
 __global__
 void check_target(double* target) {
