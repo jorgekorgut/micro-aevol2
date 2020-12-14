@@ -44,8 +44,8 @@ add_library(micro_aevol
 target_link_libraries(micro_aevol PUBLIC ZLIB::ZLIB)
 
 if ( OPENMP_FOUND )
-    add_definitions(-DUSE_OMP)
     target_link_libraries(micro_aevol PUBLIC OpenMP::OpenMP_CXX)
+    target_compile_definitions(micro_aevol PUBLIC USE_OMP)
 endif ()
 
 if ( USE_CUDA )
