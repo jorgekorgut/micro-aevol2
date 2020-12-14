@@ -47,12 +47,12 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
 
     nb_indivs_ = grid_height_ * grid_width_;
 
-    dna_length_ = cpu_exp->internal_organisms_[0]->length();
-    host_organisms_ = new char *[nb_indivs_];
+    genome_length_ = cpu_exp->internal_organisms_[0]->length();
+    host_individuals_ = new char *[nb_indivs_];
     for (int i = 0; i < nb_indivs_; ++i) {
-        host_organisms_[i] = new char[dna_length_];
+        host_individuals_[i] = new char[genome_length_];
         const auto& org = cpu_exp->internal_organisms_[i];
-        memcpy(host_organisms_[i], org->dna_->seq_.data(), dna_length_ * sizeof(char));
+        memcpy(host_individuals_[i], org->dna_->seq_.data(), genome_length_ * sizeof(char));
     }
 
     target_ = new double[FUZZY_SAMPLING];
@@ -79,23 +79,23 @@ void cuExpManager::run_a_step() {
     dim3 grid_dim(grid_x, grid_y);
     selection<<<grid_dim, bloc_dim>>>(grid_height_,
                                       grid_width_,
-                                      device_organisms_,
+                                      device_individuals_,
                                       rand_service_,
                                       reproducers_);
 
     // Reproduction
-    reproduction<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, reproducers_, all_parent_dna_);
+    reproduction<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, reproducers_, all_parent_genome_);
 
     // Mutation
     auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
-    do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, mutation_rate_, rand_service_);
+    do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, mutation_rate_, rand_service_);
 
     // Evaluation
-    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
+    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, device_target_);
 
     // Swap genome information
-    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
-    swap(all_parent_dna_, all_child_dna_);
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
+    swap(all_parent_genome_, all_child_genome_);
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -110,11 +110,11 @@ void cuExpManager::run_evolution(int nb_gen) {
     // Evaluation of population at generation 0
     auto threads_per_block = 64;
     auto grid_dim_1d = ceil((float) nb_indivs_ / (float) threads_per_block);
-    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_organisms_, device_target_);
-    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_organisms_, all_parent_dna_);
+    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, device_target_);
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
     CHECK_KERNEL
-    swap(all_parent_dna_, all_child_dna_);
-    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+    swap(all_parent_genome_, all_child_genome_);
+    check_result<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
 
     printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
@@ -130,7 +130,7 @@ void cuExpManager::run_evolution(int nb_gen) {
         }
     }
 
-    check_result<<<1,1>>>(nb_indivs_, device_organisms_);
+    check_result<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
     cudaProfilerStop();
 }
@@ -172,8 +172,8 @@ void cuExpManager::save(int t) const {
     transfer_to_host();
 
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
-        gzwrite(exp_backup_file, &dna_length_, sizeof(dna_length_));
-        gzwrite(exp_backup_file, host_organisms_[indiv_id], dna_length_ * sizeof(char));
+        gzwrite(exp_backup_file, &genome_length_, sizeof(genome_length_));
+        gzwrite(exp_backup_file, host_individuals_[indiv_id], genome_length_ * sizeof(char));
     }
 
     gzwrite(exp_backup_file, &seed_, sizeof(seed_));
@@ -191,13 +191,13 @@ void cuExpManager::load(int t) {
 
 void cuExpManager::transfer_to_device() {
     // Allocate memory for individuals in device world
-    checkCuda(cudaMalloc(&(device_organisms_), nb_indivs_ * sizeof(cuIndividual)));
-    auto all_genomes_size = nb_indivs_ * dna_length_;
+    checkCuda(cudaMalloc(&(device_individuals_), nb_indivs_ * sizeof(cuIndividual)));
+    auto all_genomes_size = nb_indivs_ * genome_length_;
     // For each genome, we add a phantom space at the end.
     auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
 
-    checkCuda(cudaMalloc(&(all_child_dna_), all_genomes_size_w_phantom * sizeof(char)));
-    checkCuda(cudaMalloc(&(all_parent_dna_), all_genomes_size_w_phantom * sizeof(char)));
+    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(char)));
+    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(char)));
 
     uint8_t* all_promoters;
     uint* all_terminators;
@@ -210,14 +210,14 @@ void cuExpManager::transfer_to_device() {
 
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto offset = dna_length_ + PROM_SIZE;
-        auto indiv_genome_pointer = all_child_dna_ + (i * offset);
-        auto indiv_genome_phantom_pointer = indiv_genome_pointer + dna_length_;
-        checkCuda(cudaMemcpy(indiv_genome_pointer, host_organisms_[i], dna_length_, cudaMemcpyHostToDevice));
-        checkCuda(cudaMemcpy(indiv_genome_phantom_pointer, host_organisms_[i], PROM_SIZE, cudaMemcpyHostToDevice));
+        auto offset = genome_length_ + PROM_SIZE;
+        auto indiv_genome_pointer = all_child_genome_ + (i * offset);
+        auto indiv_genome_phantom_pointer = indiv_genome_pointer + genome_length_;
+        checkCuda(cudaMemcpy(indiv_genome_pointer, host_individuals_[i], genome_length_, cudaMemcpyHostToDevice));
+        checkCuda(cudaMemcpy(indiv_genome_phantom_pointer, host_individuals_[i], PROM_SIZE, cudaMemcpyHostToDevice));
     }
 
-    init_device_population<<<1, 1>>>(nb_indivs_, dna_length_, device_organisms_, all_child_dna_,
+    init_device_population<<<1, 1>>>(nb_indivs_, genome_length_, device_individuals_, all_child_genome_,
                                      all_promoters, all_terminators, all_prot_start, all_rnas);
     CHECK_KERNEL
 
@@ -246,9 +246,9 @@ void cuExpManager::transfer_to_device() {
 
 void cuExpManager::transfer_to_host() const {
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto offset = dna_length_ + PROM_SIZE;
-        auto indiv_genome_pointer = all_parent_dna_ + (i * offset);
-        checkCuda(cudaMemcpy(host_organisms_[i], indiv_genome_pointer, dna_length_, cudaMemcpyDeviceToHost));
+        auto offset = genome_length_ + PROM_SIZE;
+        auto indiv_genome_pointer = all_parent_genome_ + (i * offset);
+        checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome_pointer, genome_length_, cudaMemcpyDeviceToHost));
     }
 
     RandService tmp;

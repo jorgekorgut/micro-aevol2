@@ -32,8 +32,8 @@ private:
     // Host Data
     int nb_indivs_;
 
-    int dna_length_;
-    char** host_organisms_;
+    int genome_length_;
+    char** host_individuals_;
 
     key_value_type seed_;
     size_t nb_counter_;
@@ -49,9 +49,9 @@ private:
     int backup_step_;
 
     // Device data
-    cuIndividual* device_organisms_;
-    char* all_child_dna_;
-    char* all_parent_dna_;
+    cuIndividual* device_individuals_;
+    char* all_child_genome_;
+    char* all_parent_genome_;
 
     int* reproducers_;
 

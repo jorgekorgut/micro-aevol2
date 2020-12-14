@@ -160,15 +160,15 @@ void check_rng(RandService* rand_service) {
 }
 
 __global__
-void init_device_population(int nb_indivs, int dna_length, cuIndividual* all_individuals, char* all_genomes,
+void init_device_population(int nb_indivs, int genome_length, cuIndividual* all_individuals, char* all_genomes,
                             uint8_t* all_promoters, uint* all_terminators, uint* all_prot_start, cuRNA* all_rnas) {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
     auto rr_width = blockDim.x * gridDim.x;
 
     for (int i = idx; i < nb_indivs; i += rr_width) {
         auto& local_indiv = all_individuals[i];
-        local_indiv.size = dna_length;
-        auto offset = dna_length * i;
+        local_indiv.size = genome_length;
+        auto offset = genome_length * i;
         local_indiv.genome = all_genomes + offset + i * PROM_SIZE;
         local_indiv.promoters = all_promoters + offset;
         local_indiv.terminators = all_terminators + offset;
