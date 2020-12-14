@@ -3,7 +3,6 @@
 
 % \documentclass{beamer}
 \usepackage[utf8]{inputenc}
-\usepackage{default}
 \usetheme{CambridgeUS}
 \usepackage{color}
 % \usepackage[dvipsnames]{xcolor}
@@ -12,6 +11,8 @@
 
 \usecolortheme{dolphin}
 \usepackage{subfigure}
+\usepackage{graphicx}
+\usepackage{xcolor}
 
 
 \definecolor{mblue}{RGB}{0,34,102}
@@ -34,7 +35,7 @@
 
 % \pgfpagesuselayout{4 on 1}[a4paper,border shrink=5mm]
 
-\title[Mini-Aevol]{Introducting mini-Aevol:\\ Underlying models, implementation and\\ possible optimizations and parallelization}
+\title[Mini-Aevol]{Introducing micro-Aevol:\\ Underlying models, implementation and\\ possible optimizations and parallelization}
 \author[J. Rouzaud-Cornabas]{Jonathan Rouzaud-Cornabas}
 \institute[Insa de Lyon -- Inria]{LIRIS / Insa de Lyon -- Inria Beagle}
 \date{}
@@ -83,7 +84,7 @@
 \end{figure}
 \only<1>{
   \begin{itemize}
-   \item The workflow is repeat for every cell of the grid
+   \item The workflow is repeated for every cell of the grid
    \item Each cell contains one and only one organism
   \end{itemize}
 }
@@ -93,7 +94,7 @@
   \only<2>{
   \begin{enumerate}
    \item Promoter (size = 22) : Hamming distance (predefined motif, max. error = 4)
-   \item Terminator (size = 4) : Exact match ($DNA[pos:pos+4]==DNA[pos+10:pos+14]$)
+   \item Terminator (size = 4) : Exact match ($DNA[pos:pos+4) == NOT DNA[pos+9:pos+5)$)
   \end{enumerate}
    }
    \only<3->{
@@ -109,8 +110,8 @@
   \only<4>{
   \begin{itemize}
   \item Looking for $N = \frac{Protein\_Length}{3}$ motifs
-  \item Decoding each triple to addition to $M$, $W$, $H$ variables
-  \item Translation $M$, $W$, $H$ into triangle and approx. them into $300$ double array
+  \item Decoding each codon into $M$, $W$, $H$ Amino Acid
+  \item Translate $M$, $W$, $H$ into triangle and approximate them into $300$ double array
   \end{itemize}
   }
 \only<5->{
@@ -118,17 +119,17 @@
   \only<5>{
   \begin{itemize}
   \item Looking for $N = \frac{Protein\_Length}{3}$ motifs
-  \item Decoding each triple to addition to $M$, $W$, $H$ variables
-  \item Translation $M$, $W$, $H$ into triangle and approx. them into $300$ double array
+  \item Decoding each codon into $M$, $W$, $H$ Amino Acid
+  \item Translate $M$, $W$, $H$ into triangle and approximate them into $300$ double array
    \item Summing into a global $300$ double array
   \end{itemize}
   }
   \only<6->{
-  \item Phenotype $\rightarrow$ Metabolic error: \textbf{Difference betwen 2 arrays}
+  \item Phenotype $\rightarrow$ Metabolic error: \textbf{Difference between 2 arrays}
  \only<6>{
  \begin{itemize}
-   \item Phenotypical Target : Pre-defined array built from a sum of gaussians
-   \item Compute the difference the Phenotype and the phenotypical target
+   \item Phenotypical Target : Pre-defined array built from a sum of gaussian curves
+   \item Compute the difference between the phenotype and the phenotypical target
   \end{itemize}
   }
 }
@@ -139,7 +140,7 @@
   \item Metabolic error $\rightarrow$ Fitness:
   \only<7>{
   \begin{itemize}
-   \item $exp(-selection\_pressure \times metabolic\_error)$
+   \item $\exp(-selection\_pressure \times metabolic\_error)$
   \end{itemize}
   }
   \only<8->{
@@ -149,8 +150,8 @@
    \item Only kernel requiring data coming from other cells of the grid
    \item Fetch fitness of the neighboring cells
    \item Use the fitness proportionate algorithms to select the organism that will reproduce in the cell
+   \item Copy the DNA of the selected organism into the cell
    \item Delete the old organism
-    \item Copy the DNA of the organism into the cell
   \end{itemize}
   }
   }
@@ -158,7 +159,7 @@
   \item Selection $\rightarrow$ Mutation : \textbf{Modify the DNA}
   \only<9>{
   \begin{itemize}
-   \item Switch of the value of up to 6 value in the DNA array
+   \item Random variation base on different type of mutations
   \end{itemize}
   }
   }
@@ -170,19 +171,19 @@
 \begin{frame}
  \frametitle{Aevol VS mini-Aevol}
  \begin{itemize}
-  \item Aevol VS micro-Aevol SLOC : 87,000 VS 2,800 
+  \item Aevol VS micro-Aevol SLOC : 87,000 VS 2,800
   \vfill
-  \item Simplify model
+  \item Simplified model
   \begin{itemize}
-  \item Only a strand of DNA (and not too) \textit{i.e.} the DNA is read one-way and not both-way
+  \item Only one strand of DNA (and not two) \textit{i.e.} the DNA is read one-way and not both-way
   \item A reduce mutation sets: no mutation that change the size
-  \item A lot of advances features are missing: no plasmid, 4bp DNA, ...
+  \item A lot of advances features are missing: no plasmid, 4bp DNA, \ldots
   \end{itemize}
   \vfill
   \item Implementation
   \begin{itemize}
    \item Lot less robust to input errors
-   \item Can not change model parameters during an evolution
+   \item Cannot change model parameters during an evolution
    \item No phylogenetic tree
    \item No postprocessing tool
   \end{itemize}
@@ -204,10 +205,10 @@
  \frametitle{Optimizations}
  \begin{itemize}
   \item Working only on diff (where the DNA has changed during the mutation) \textit{i.e.} do not reparse the whole DNA at each generation (available in the git repository for sequential CPU)
-  \item Remove the modulo that allows to simulate circular DNA (copy a part of the beginning of the DNA at the end to do it)
+  \item Remove the "modulo" that allows to simulate circular DNA (copy a part of the beginning of the DNA at the end to do it)
   \item Change the coding of the DNA from a char array to a bitset
   \item Vectorization of the comparison between DNA and motifs
-  \item Search multiple motifs at once through vectorization
+  \item Search multiple patterns at once through vectorization
   \item Evaluate classic mutation operator (malloc+memcpy+mutation) and backtrace mutation operator (malloc+copy)
   \item One large 1D structure (merge all DNAs into a big DNA) to ease load balancing
   \item Include metadata (promoter, terminator, start, stop) into a bitset
@@ -218,11 +219,11 @@
 \begin{frame}
  \frametitle{Parallelization}
  \begin{itemize}
-  \item OpenMP (parallel for and/or tasks with or without dependency)
+  \item OpenMP (parallel for and/or tasks with or without dependencies)
   \item CUDA
   \item OpenACC
   \item MPI
-  \item Hybrid \textit{e.g.} OpenMP+OpenACC, OpenMP+MPI, ...
+  \item Hybrid \textit{e.g.} OpenMP+OpenACC, OpenMP+MPI, \ldots
   \vfill
   \item Implement the stencil (\textit{i.e.} asynchronous time between grid cells)
  \end{itemize}
@@ -235,7 +236,7 @@
 \begin{enumerate}
  \item Use GIT (or another versioning software)
  \item For each optimization/parallelization, tests its performance, scalability (weak and strong) and create visualization of them
- \item You need to verify the reproduceability of your code \textit{i.e.}, same parameters must lead to same results
+ \item You need to verify the reproducibility of your code \textit{i.e.}, same parameters must lead to same results
 \end{enumerate}
 \vfill
 Simulation parameters:
@@ -244,11 +245,6 @@ Simulation parameters:
  \item Population size ($-w$ and $-h$) : 32x32, 128x128, 256x256 (you can up to 1024x1024)
  \item Mutation rate ($-m$) : 0.0001, 0.00001, 0.000001
 \end{itemize}
-
-
  \end{frame}
-
-
-
 
 \end{document}
