@@ -28,6 +28,7 @@ private:
     // Interface Host - Device
     void transfer_to_device();
     void transfer_to_host() const;
+    void device_data_destructor();
 
     // Host Data
     int nb_indivs_;

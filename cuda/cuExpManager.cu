@@ -67,7 +67,10 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
 }
 
 cuExpManager::~cuExpManager() {
-
+    device_data_destructor();
+    delete[] counters_;
+    delete[] target_;
+    delete[] host_individuals_;
 }
 
 void cuExpManager::run_a_step() {
@@ -255,3 +258,31 @@ void cuExpManager::transfer_to_host() const {
     checkCuda(cudaMemcpy(&tmp, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
     checkCuda(cudaMemcpy(counters_, tmp.rng_counters, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyDeviceToHost));
 }
+
+void cuExpManager::device_data_destructor() {
+    RandService tmp_rand;
+    checkCuda(cudaMemcpy(&tmp_rand, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
+    checkCuda(cudaFree(tmp_rand.rng_counters));
+    checkCuda(cudaFree(rand_service_));
+
+    checkCuda(cudaFree(reproducers_));
+
+    checkCuda(cudaFree(device_target_));
+
+    cuIndividual tmp;
+    checkCuda(cudaMemcpy(&tmp, device_individuals_, sizeof(cuIndividual), cudaMemcpyDeviceToHost));
+    checkCuda(cudaFree(tmp.promoters));
+    checkCuda(cudaFree(tmp.terminators));
+    checkCuda(cudaFree(tmp.prot_start));
+    checkCuda(cudaFree(tmp.list_rnas));
+    checkCuda(cudaFree(all_parent_genome_));
+    checkCuda(cudaFree(all_child_genome_));
+
+    checkCuda(cudaFree(device_individuals_));
+
+    cudaDeviceReset();
+}
+
+// CUDA KERNELS
+
+
