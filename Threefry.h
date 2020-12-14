@@ -25,6 +25,7 @@ public:
     Threefry(int X, int Y, gzFile backup_file);
 
     std::vector<crt_value_type> &counters() { return counters_; }
+    int get_seed() const { return seed_[1]; }
 
     class Gen {
         Threefry123::ctr_type state_;

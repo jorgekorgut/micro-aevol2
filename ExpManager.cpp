@@ -268,6 +268,7 @@ void ExpManager::load(int t) {
     }
 
     rng_ = std::move(std::make_unique<Threefry>(grid_width_, grid_height_, exp_backup_file));
+    seed_ = rng_->get_seed();
 
     if (gzclose(exp_backup_file) != Z_OK) {
         cerr << "Error while closing backup file" << endl;
