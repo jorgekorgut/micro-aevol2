@@ -1,5 +1,6 @@
 add_library(cuda_micro_aevol
         cuExpManager.cu
+        cuda_kernels.cu
         cuIndividual.cu
         cuProtein.cu
         misc_functions.cu
