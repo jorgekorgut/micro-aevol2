@@ -195,6 +195,7 @@ int main(int argc, char* argv[]) {
     // Not very clean but the goal is to re-use the initialization on the host to transfer data to device
     auto* tmp = dynamic_cast<ExpManager *>(exp_manager);
     exp_manager = new cuExpManager(tmp);
+    delete tmp;
 #endif
 
     exp_manager->run_evolution(nbstep);

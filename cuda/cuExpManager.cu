@@ -43,18 +43,20 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
 
     mutation_rate_ = cpu_exp->mutation_rate_;
 
-    backup_step_ = cpu_exp->grid_height_;
+    backup_step_ = cpu_exp->backup_step_;
 
     nb_indivs_ = grid_height_ * grid_width_;
 
     dna_length_ = cpu_exp->internal_organisms_[0]->length();
     host_organisms_ = new char *[nb_indivs_];
     for (int i = 0; i < nb_indivs_; ++i) {
+        host_organisms_[i] = new char[dna_length_];
         const auto& org = cpu_exp->internal_organisms_[i];
-        host_organisms_[i] = org->dna_->seq_.data();
+        memcpy(host_organisms_[i], org->dna_->seq_.data(), dna_length_ * sizeof(char));
     }
 
-    target_ = cpu_exp->target;
+    target_ = new double[FUZZY_SAMPLING];
+    memcpy(target_, cpu_exp->target, FUZZY_SAMPLING * sizeof(double));
 
     seed_ = cpu_exp->seed_;
     nb_counter_ = cpu_exp->rng_->counters().size();
@@ -118,10 +120,14 @@ void cuExpManager::run_evolution(int nb_gen) {
     printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
     for (int gen = 0; gen < nb_gen; gen++) {
         AeTime::plusplus();
+        printf("Generation %d : \n",AeTime::time());
 
         run_a_step();
 
-        printf("Generation %d : \n",AeTime::time());
+        if (AeTime::time() % backup_step_ == 0) {
+            save(AeTime::time());
+            cout << "Backup for generation " << AeTime::time() << " done !" << endl;
+        }
     }
 
     check_result<<<1,1>>>(nb_indivs_, device_organisms_);
@@ -130,54 +136,52 @@ void cuExpManager::run_evolution(int nb_gen) {
 }
 
 void cuExpManager::save(int t) const {
-//    char exp_backup_file_name[255];
-//
-//    sprintf(exp_backup_file_name, "backup/backup_%d.zae", t);
-//
-//    // -------------------------------------------------------------------------
-//    // Open backup files
-//    // -------------------------------------------------------------------------
-//    gzFile exp_backup_file = gzopen(exp_backup_file_name, "w");
-//
-//
-//    // -------------------------------------------------------------------------
-//    // Check that files were correctly opened
-//    // -------------------------------------------------------------------------
-//    if (exp_backup_file == Z_NULL) {
-//        printf("Error: could not open backup file %s\n",
-//               exp_backup_file_name);
-//        exit(EXIT_FAILURE);
-//    }
-//
-//
-//    // -------------------------------------------------------------------------
-//    // Write the backup file
-//    // -------------------------------------------------------------------------
-//    gzwrite(exp_backup_file, &t, sizeof(t));
-//
-//    gzwrite(exp_backup_file, &grid_height_, sizeof(grid_height_));
-//    gzwrite(exp_backup_file, &grid_width_, sizeof(grid_width_));
-//
-//    gzwrite(exp_backup_file, &backup_step_, sizeof(backup_step_));
-//
-//    gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
-//
-//
-//
-//    for (int i = 0; i < FUZZY_SAMPLING; i++) {
-//        double tmp = target_[i];
-//        gzwrite(exp_backup_file, &tmp, sizeof(tmp));
-//    }
-//// TODO: transfer back device data to host
-//    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
-//        prev_internal_organisms_[indiv_id]->save(exp_backup_file);
-//    }
-//
-//    rng_->save(exp_backup_file);
-//
-//    if (gzclose(exp_backup_file) != Z_OK) {
-//        cerr << "Error while closing backup file" << endl;
-//    }
+    char exp_backup_file_name[255];
+    sprintf(exp_backup_file_name, "backup/backup_%d.zae", t);
+
+    // -------------------------------------------------------------------------
+    // Open backup files
+    // -------------------------------------------------------------------------
+    gzFile exp_backup_file = gzopen(exp_backup_file_name, "w");
+
+    // -------------------------------------------------------------------------
+    // Check that files were correctly opened
+    // -------------------------------------------------------------------------
+    if (exp_backup_file == Z_NULL) {
+        printf("Error: could not open backup file %s\n",
+               exp_backup_file_name);
+        exit(EXIT_FAILURE);
+    }
+
+    // -------------------------------------------------------------------------
+    // Write the backup file
+    // -------------------------------------------------------------------------
+    gzwrite(exp_backup_file, &t, sizeof(t));
+
+    gzwrite(exp_backup_file, &grid_height_, sizeof(grid_height_));
+    gzwrite(exp_backup_file, &grid_width_, sizeof(grid_width_));
+    gzwrite(exp_backup_file, &backup_step_, sizeof(backup_step_));
+    gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
+
+
+    for (int i = 0; i < FUZZY_SAMPLING; i++) {
+        double tmp = target_[i];
+        gzwrite(exp_backup_file, &tmp, sizeof(tmp));
+    }
+
+    transfer_to_host();
+
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+        gzwrite(exp_backup_file, &dna_length_, sizeof(dna_length_));
+        gzwrite(exp_backup_file, host_organisms_[indiv_id], dna_length_ * sizeof(char));
+    }
+
+    gzwrite(exp_backup_file, &seed_, sizeof(seed_));
+    gzwrite(exp_backup_file, counters_, nb_counter_ * sizeof(counters_[0]));
+
+    if (gzclose(exp_backup_file) != Z_OK) {
+        cerr << "Error while closing backup file" << endl;
+    }
 }
 
 void cuExpManager::load(int t) {
@@ -238,4 +242,16 @@ void cuExpManager::transfer_to_device() {
 //    check_rng<<<1, 1>>>(rand_service_);
 //    check_target<<<1, 1>>>(device_target_);
 //    CHECK_KERNEL
+}
+
+void cuExpManager::transfer_to_host() const {
+    for (int i = 0; i < nb_indivs_; ++i) {
+        auto offset = dna_length_ + PROM_SIZE;
+        auto indiv_genome_pointer = all_parent_dna_ + (i * offset);
+        checkCuda(cudaMemcpy(host_organisms_[i], indiv_genome_pointer, dna_length_, cudaMemcpyDeviceToHost));
+    }
+
+    RandService tmp;
+    checkCuda(cudaMemcpy(&tmp, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
+    checkCuda(cudaMemcpy(counters_, tmp.rng_counters, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyDeviceToHost));
 }
