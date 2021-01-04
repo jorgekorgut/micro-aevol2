@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
                     getopt_long(argc, argv, options_list, long_options_list, NULL))
            != -1) {
         switch (option) {
-            case 'e' : {
+            case 'H' : {
                 print_help(argv[0]);
                 exit(EXIT_SUCCESS);
             }
