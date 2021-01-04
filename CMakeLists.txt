@@ -3,6 +3,10 @@ project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 14)
 
+set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
+set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
+set(USE_CUDA OFF CACHE BOOL "Whether to enable CUDA parallelization")
+
 if ( DO_TRACES )
     add_definitions(-DTRACES)
     message( STATUS "Traces are activated" )
