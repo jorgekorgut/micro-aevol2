@@ -102,6 +102,12 @@ void cuExpManager::run_a_step() {
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
+    const int MB_SIZE = 8;
+    // Set a heap size of MB_SIZE megabytes.
+    // cf: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#heap-memory-allocation
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, MB_SIZE * 1024 * 1024);
+    // Default is 8 MB if not specified
+
     cudaProfilerStart();
     cout << "Transfer" << endl;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
