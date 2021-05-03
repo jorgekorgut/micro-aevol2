@@ -535,7 +535,7 @@ void Organism::compute_phenotype() {
             }
 
             // Compute the second equation of the triangle
-            slope = height / (double)(ix2 - ix1);
+            slope = height / (double)(ix1 - ix2);
             y_intercept = -(double)ix2 * slope;
 
             // Updating value between x1 and x2

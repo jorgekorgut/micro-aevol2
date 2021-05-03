@@ -74,6 +74,7 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
     auto *g3 = new Gaussian(0.3, 0.8, 0.03);
 
     target = new double[FUZZY_SAMPLING];
+    double geometric_area = 0.0;
     for (int i = 0; i < FUZZY_SAMPLING; i++) {
         double pt_i = ((double) i) / (double) FUZZY_SAMPLING;
 
@@ -85,17 +86,12 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
         tmp = tmp < Y_MIN ? Y_MIN : tmp;
 
         target[i] = tmp;
+        geometric_area += tmp / (double)FUZZY_SAMPLING;
     }
 
     delete g1;
     delete g2;
     delete g3;
-
-    double geometric_area = 0;
-    for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
-        // Computing a trapezoid area
-        geometric_area += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double) FUZZY_SAMPLING));
-    }
 
     printf("Initialized environmental target %f\n", geometric_area);
 
