@@ -337,7 +337,7 @@ void Organism::translate_protein() {
             }
 
 /** This part of the code translate a Gray code binary to standard
- * It looks like black magic (again) but the ide of the implementation can be found hear:
+ * It looks like black magic (again) but the idea of the implementation can be found hear:
  * https://www.elprocus.com/code-converter-binary-to-gray-code-and-gray-code-to-binary-conversion/ **/
             double M = 0.0;
             double W = 0.0;
@@ -514,36 +514,35 @@ void Organism::compute_phenotype() {
             double x1 = protein->m;
             double x2 = protein->m + protein->w;
 
+            // Interface between continuous world (up) and discrete world (down)
             int ix0 = (int) (x0 * FUZZY_SAMPLING);
             int ix1 = (int) (x1 * FUZZY_SAMPLING);
             int ix2 = (int) (x2 * FUZZY_SAMPLING);
 
-            if (ix0 < 0) ix0 = 0; else if (ix0 > (FUZZY_SAMPLING - 1)) ix0 = FUZZY_SAMPLING - 1;
-            if (ix1 < 0) ix1 = 0; else if (ix1 > (FUZZY_SAMPLING - 1)) ix1 = FUZZY_SAMPLING - 1;
-            if (ix2 < 0) ix2 = 0; else if (ix2 > (FUZZY_SAMPLING - 1)) ix2 = FUZZY_SAMPLING - 1;
+            // active contribution is positive and inhib is negative
+            double height = protein->h * protein->e;
+            auto* local_phenotype = protein->h > 0 ? activ_phenotype : inhib_phenotype;
 
             // Compute the first equation of the triangle
-            double incY = (protein->h * protein->e) / (ix1 - ix0);
-            int count = 1;
+            double slope = height / (double)(ix1 - ix0);
+            double y_intercept = -(double)ix0 * slope;
 
             // Updating value between x0 and x1
-            for (int i = ix0 + 1; i <= ix1; i++) {
-                if (protein->h > 0)
-                    activ_phenotype[i] += (incY * (count++));
-                else
-                    inhib_phenotype[i] += (incY * (count++));
+            for (int i = ix0; i < ix1; i++) {
+                if(i >= 0) {
+                    local_phenotype[i] += slope * (double)i + y_intercept;
+                }
             }
 
             // Compute the second equation of the triangle
-            incY = (protein->h * protein->e) / (ix2 - ix1);
-            count = 1;
+            slope = height / (double)(ix2 - ix1);
+            y_intercept = -(double)ix2 * slope;
 
             // Updating value between x1 and x2
-            for (int i = ix1 + 1; i < ix2; i++) {
-                if (protein->h > 0)
-                    activ_phenotype[i] += (protein->h * protein->e) - (incY * count++);
-                else
-                    inhib_phenotype[i] += (protein->h * protein->e) - (incY * count++);
+            for (int i = ix1; i < ix2; i++) {
+                if(i < FUZZY_SAMPLING) {
+                    local_phenotype[i] += slope * (double)i + y_intercept;
+                }
             }
         }
     }
@@ -566,18 +565,12 @@ void Organism::compute_phenotype() {
 }
 
 void Organism::compute_fitness(const double *target) {
+    metaerror = 0.0;
+
     for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING; fuzzy_idx++) {
-        delta[fuzzy_idx] = phenotype[fuzzy_idx] - target[fuzzy_idx];
-    }
-
-    metaerror = 0;
-
-    for (int fuzzy_idx = 0; fuzzy_idx < FUZZY_SAMPLING - 1; fuzzy_idx++) {
-        // Computing a trapezoid area (A+B)*h/2 with:
-        //   base A as delta[fuzzy_idx]
-        //   base B as delta[fuzzy_idx + 1]
-        //   height h as 1/FUZZY_SAMPLING
-        metaerror += (std::fabs(delta[fuzzy_idx]) + std::fabs(delta[fuzzy_idx + 1])) / (2 * (double)FUZZY_SAMPLING);
+        delta[fuzzy_idx] = fabs(phenotype[fuzzy_idx] - target[fuzzy_idx]);
+        delta[fuzzy_idx] /= (double) FUZZY_SAMPLING;
+        metaerror += delta[fuzzy_idx];
     }
 
     fitness = exp(-SELECTION_PRESSURE * ((double) metaerror));
