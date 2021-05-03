@@ -702,3 +702,23 @@ void Organism::look_for_new_promoters_starting_before(int32_t pos) {
     }
 }
 
+// Printings
+
+void Organism::print_info() {
+    printf("Fitness: %1.10e\n", fitness);
+    for (int i = 0; i < protein_count_; i++) {
+        const auto& prot = proteins[i];
+        printf("%d: %d %f %f %f %f\n", prot->protein_start, prot->is_functional,
+               prot->e, prot->w, prot->m, prot->h);
+    }
+    printf("\nnumber of proteins: %d\n", protein_count_);
+    for (int i = 0; i < FUZZY_SAMPLING; ++i) {
+        if (phenotype[i] == 0.0){
+            printf("0|");
+        } else {
+            printf("%f|", phenotype[i]);
+        }
+    }
+    printf("\n");
+}
+

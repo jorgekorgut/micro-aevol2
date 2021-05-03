@@ -273,8 +273,8 @@ __device__ void cuIndividual::compute_phenotype() {
     __shared__ double phenotype_activ_inhib[2][FUZZY_SAMPLING]; // { activ_phenotype, inhib_phenotype }
     // Initialize activation and inhibition to zero
     for (int i = idx; i < FUZZY_SAMPLING; i += rr_width) {
-        phenotype_activ_inhib[0][i] = 0;
-        phenotype_activ_inhib[1][i] = 0;
+        phenotype_activ_inhib[0][i] = 0.0;
+        phenotype_activ_inhib[1][i] = 0.0;
     }
     __syncthreads();
 

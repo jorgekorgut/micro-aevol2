@@ -14,7 +14,7 @@ constexpr int8_t PROM_SIZE = 22;
 constexpr const char *PROM_SEQ = "0101011001110010010110";
 // terminator
 constexpr int8_t TERM_STEM_SIZE = 4;
-constexpr int8_t TERM_LOOP_SIZE = 2;
+constexpr int8_t TERM_LOOP_SIZE = 3;
 constexpr int8_t TERM_SIZE = TERM_STEM_SIZE + TERM_LOOP_SIZE + TERM_STEM_SIZE;
 // shine dalgardo
 constexpr int8_t SHINE_DAL_SIZE = 6;

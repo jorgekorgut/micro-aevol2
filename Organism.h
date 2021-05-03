@@ -69,6 +69,8 @@ public:
 
     void evaluate(const double* target);
 
+    // Printings
+    void print_info();
 
     using ErrorType = int8_t;
     // Map position (int) to Promoter

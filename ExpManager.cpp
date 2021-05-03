@@ -113,6 +113,8 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
         r_compare = round((random_organism->metaerror - geometric_area) * 1E10) / 1E10;
     }
 
+//    internal_organisms_[0]->print_info();
+
     printf("Populating the environment\n");
 
     // Create a population of clones based on the randomly generated organism
