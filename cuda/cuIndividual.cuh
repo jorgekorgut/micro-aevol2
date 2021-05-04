@@ -28,7 +28,12 @@ struct cuRNA {
 };
 
 struct cuIndividual {
-    __device__ void evaluate(const double* target);
+    __device__ void search_patterns();
+    __device__ void sparse_meta();
+    __device__ void transcription();
+    __device__ void find_gene_per_RNA();
+    __device__ void translation();
+
 
     __device__ void prepare_rnas();
 

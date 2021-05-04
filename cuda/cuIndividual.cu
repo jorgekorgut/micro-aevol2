@@ -7,14 +7,10 @@
 
 #include <cstdio>
 
-__device__ void cuIndividual::evaluate(const double* target) {
+__device__ void cuIndividual::search_patterns() {
+    // One block per individual
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
-
-    if (idx == 0) {
-        clean_metadata();
-    }
-    __syncthreads();
 
     for (uint position = idx; position < size; position += rr_width) {
         const char *genome_at_pos = genome + position;
@@ -23,7 +19,12 @@ __device__ void cuIndividual::evaluate(const double* target) {
         terminators[position] = is_terminator(genome_at_pos);
         prot_start[position]  = is_prot_start(genome_at_pos);
     }
-    __syncthreads();
+}
+
+
+__device__ void cuIndividual::sparse_meta() {
+    // One block per individual
+    uint idx = threadIdx.x;
 
     if (idx == 0) {
         prepare_rnas();
@@ -34,29 +35,36 @@ __device__ void cuIndividual::evaluate(const double* target) {
     if (idx == 2) {
         nb_prot_start = sparse(size, prot_start);
     }
-    __syncthreads();
-    if (nb_prot_start <= 0 || nb_terminator <= 0)
-        return;
+}
+
+__device__ void cuIndividual::transcription() {
+    // One block per individual
+    uint idx = threadIdx.x;
+    uint rr_width = blockDim.x;
 
     for (uint rna_idx = idx; rna_idx < nb_rnas; rna_idx += rr_width) {
         compute_rna(rna_idx);
+    }
+}
+
+__device__ void cuIndividual::find_gene_per_RNA() {
+    // One block per individual
+    uint idx = threadIdx.x;
+    uint rr_width = blockDim.x;
+
+    for (uint rna_idx = idx; rna_idx < nb_rnas; rna_idx += rr_width) {
         prepare_gene(rna_idx);
     }
+}
 
-    __syncthreads();
-    if (idx == 0) {
-        gather_genes();
-    }
+__device__ void cuIndividual::translation() {
+    // One block per individual
+    uint idx = threadIdx.x;
+    uint rr_width = blockDim.x;
 
-    __syncthreads();
     for (uint gene_idx = idx; gene_idx < nb_gene; gene_idx += rr_width) {
         translate_gene(gene_idx);
     }
-    __syncthreads();
-    compute_phenotype();
-    __syncthreads();
-    compute_fitness(target);
-    __syncthreads();
 }
 
 __device__ void cuIndividual::clean_metadata() {

@@ -74,7 +74,7 @@ cuExpManager::~cuExpManager() {
 }
 
 void cuExpManager::run_a_step() {
-    auto threads_per_block = 64; // arbitrary : better if multiple of 32
+    auto threads_per_block = 32; // arbitrary : better if multiple of 32
     // Selection
     dim3 bloc_dim(threads_per_block / 2, threads_per_block / 2);
     auto grid_x = ceil((float) grid_width_ / (float) bloc_dim.x);
@@ -85,20 +85,46 @@ void cuExpManager::run_a_step() {
                                       device_individuals_,
                                       rand_service_,
                                       reproducers_);
+    CHECK_KERNEL;
 
     // Reproduction
     reproduction<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, reproducers_, all_parent_genome_);
+    CHECK_KERNEL;
 
     // Mutation
     auto grid_dim_1d = ceil((float)nb_indivs_ / (float)threads_per_block);
     do_mutation<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, mutation_rate_, rand_service_);
+    CHECK_KERNEL;
 
     // Evaluation
-    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, device_target_);
+    dim3 my_blockDim(32); // keep a multiple of 32 (warp size)
+    dim3 my_gridDim(nb_indivs_);
+    dim3 one_indiv_by_thread_grid(ceil((float)nb_indivs_ / (float)my_blockDim.x));
+
+    clean_metadata<<<one_indiv_by_thread_grid, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    search_patterns<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    sparse_meta<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    transcription<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    find_gene_per_RNA<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    gather_genes<<<one_indiv_by_thread_grid, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    translation<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    compute_phenotype<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
+    CHECK_KERNEL;
+    compute_fitness<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_, device_target_);
+    CHECK_KERNEL;
 
     // Swap genome information
     swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
     swap(all_parent_genome_, all_child_genome_);
+
+    CHECK_KERNEL;
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -290,7 +316,7 @@ void cuExpManager::device_data_destructor() {
     cudaDeviceReset();
 }
 
-// CUDA KERNELS
+// __CUDA KERNELS__
 
 // Evolution
 
@@ -301,15 +327,6 @@ void check_result(uint nb_indivs, cuIndividual* individuals) {
         printf("%d: %1.10e | ", indiv_idx, indiv.fitness);
     }
     printf("\n");
-}
-
-__global__
-void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double* target) {
-    // One block per individual
-    auto indiv_idx = blockIdx.x;
-    if (indiv_idx < nb_indivs) {
-        individuals[indiv_idx].evaluate(target);
-    }
 }
 
 __global__
@@ -417,6 +434,81 @@ void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* a
     auto& indiv = individuals[indiv_idx];
     auto offset = indiv_idx * (indiv.size + PROM_SIZE); // Do not forget phantom space
     indiv.genome = all_parent_genome + offset;
+}
+
+// Evaluation process
+
+__global__
+void clean_metadata(uint nb_indivs, cuIndividual* individuals) {
+    // One thread per individual
+    auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+    auto stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < nb_indivs; i += stride)
+        individuals[i].clean_metadata();
+}
+
+__global__
+void search_patterns(uint nb_indivs, cuIndividual* individuals) {
+    // One block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs)
+        individuals[indiv_idx].search_patterns();
+}
+
+__global__
+void sparse_meta(uint nb_indivs, cuIndividual* individuals) {
+    // One block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs)
+        individuals[indiv_idx].sparse_meta();
+}
+
+__global__
+void transcription(uint nb_indivs, cuIndividual* individuals) {
+    // One block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs)
+        individuals[indiv_idx].transcription();
+}
+
+__global__
+void find_gene_per_RNA(uint nb_indivs, cuIndividual* individuals) {
+    // One block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs)
+        individuals[indiv_idx].find_gene_per_RNA();
+}
+
+__global__
+void gather_genes(uint nb_indivs, cuIndividual* individuals) {
+    // One thread per individual
+    auto idx = threadIdx.x + blockIdx.x * blockDim.x;
+    auto stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < nb_indivs; i += stride)
+        individuals[i].gather_genes();
+}
+
+__global__ void translation(uint size, cuIndividual* individuals) {
+    // On block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < size)
+        individuals[indiv_idx].translation();
+}
+
+__global__ void compute_phenotype(uint size, cuIndividual* individuals) {
+    // On block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < size)
+        individuals[indiv_idx].compute_phenotype();
+}
+
+__global__ void compute_fitness(uint size, cuIndividual* individuals, const double* target) {
+    // On block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < size)
+        individuals[indiv_idx].compute_fitness(target);
 }
 
 // Interface Host | Device

@@ -29,6 +29,34 @@ void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* a
 __global__
 void check_result(uint nb_indivs, cuIndividual* individuals);
 
+// Evaluation process
+__global__
+void clean_metadata(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void search_patterns(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void sparse_meta(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void transcription(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void find_gene_per_RNA(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void gather_genes(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void translation(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void compute_phenotype(uint nb_indivs, cuIndividual* individual);
+
+__global__
+void compute_fitness(uint nb_indivs, cuIndividual* individual, const double* target);
+
 // Interface Host | Device
 
 __global__
