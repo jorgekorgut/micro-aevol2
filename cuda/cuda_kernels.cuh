@@ -21,9 +21,6 @@ void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate
 
 
 __global__
-void evaluate_population(uint nb_indivs, cuIndividual* individuals, const double* target);
-
-__global__
 void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* all_parent_genome);
 
 __global__

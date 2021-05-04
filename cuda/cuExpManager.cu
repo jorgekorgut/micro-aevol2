@@ -97,6 +97,16 @@ void cuExpManager::run_a_step() {
     CHECK_KERNEL;
 
     // Evaluation
+    evaluate_population();
+
+    // Swap genome information
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
+    swap(all_parent_genome_, all_child_genome_);
+
+    CHECK_KERNEL;
+}
+
+void cuExpManager::evaluate_population() {
     dim3 my_blockDim(32); // keep a multiple of 32 (warp size)
     dim3 my_gridDim(nb_indivs_);
     dim3 one_indiv_by_thread_grid(ceil((float)nb_indivs_ / (float)my_blockDim.x));
@@ -119,12 +129,6 @@ void cuExpManager::run_a_step() {
     CHECK_KERNEL;
     compute_fitness<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_, device_target_);
     CHECK_KERNEL;
-
-    // Swap genome information
-    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
-    swap(all_parent_genome_, all_child_genome_);
-
-    CHECK_KERNEL;
 }
 
 void cuExpManager::run_evolution(int nb_gen) {
@@ -145,7 +149,7 @@ void cuExpManager::run_evolution(int nb_gen) {
     // Evaluation of population at generation 0
     auto threads_per_block = 64;
     auto grid_dim_1d = ceil((float) nb_indivs_ / (float) threads_per_block);
-    evaluate_population<<<nb_indivs_, threads_per_block>>>(nb_indivs_, device_individuals_, device_target_);
+    evaluate_population();
     swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
     CHECK_KERNEL
     swap(all_parent_genome_, all_child_genome_);

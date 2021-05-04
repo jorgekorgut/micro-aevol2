@@ -24,6 +24,7 @@ public:
 
 private:
     void run_a_step();
+    void evaluate_population();
 
     // Interface Host - Device
     void transfer_to_device();
