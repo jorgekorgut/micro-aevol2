@@ -8,8 +8,6 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
-#include "nvToolsExt.h"
-#include <cuda_profiler_api.h>
 #include <zlib.h>
 
 #include "AeTime.h"
@@ -74,6 +72,9 @@ cuExpManager::~cuExpManager() {
 }
 
 void cuExpManager::run_a_step() {
+    // To time Kernel, take advantage of cuda streams with CUDA Events
+    // cf: https://developer.nvidia.com/blog/how-implement-performance-metrics-cuda-cc/
+
     auto threads_per_block = 32; // arbitrary : better if multiple of 32
     // Selection
     dim3 bloc_dim(threads_per_block / 2, threads_per_block / 2);
@@ -138,7 +139,6 @@ void cuExpManager::run_evolution(int nb_gen) {
     cudaDeviceSetLimit(cudaLimitMallocHeapSize, MB_SIZE * 1024 * 1024);
     // Default is 8 MB if not specified
 
-    cudaProfilerStart();
     cout << "Transfer" << endl;
     high_resolution_clock::time_point t1 = high_resolution_clock::now();
     transfer_to_device();
@@ -171,7 +171,6 @@ void cuExpManager::run_evolution(int nb_gen) {
 
     check_result<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
-    cudaProfilerStop();
 }
 
 void cuExpManager::save(int t) const {
