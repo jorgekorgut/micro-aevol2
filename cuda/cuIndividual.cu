@@ -6,6 +6,7 @@
 #include "misc_functions.cuh"
 
 #include <cstdio>
+#include <cassert>
 
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
@@ -76,15 +77,14 @@ __device__ void cuIndividual::clean_metadata() {
     fitness = 0.0;
 
     for (int i = 0; i < nb_rnas; ++i) {
-        auto* local_list_gene = list_rnas[i].list_gene;
-        if (local_list_gene) delete[] local_list_gene;
+        delete[] list_rnas[i].list_gene;
         list_rnas[i].list_gene = nullptr;
     }
     nb_rnas = 0;
 
-    if (list_gene) delete[] list_gene;
+    delete[] list_gene;
     list_gene = nullptr;
-    if (list_protein) delete[] list_protein;
+    delete[] list_protein;
     list_protein = nullptr;
 }
 
@@ -126,9 +126,9 @@ __device__ void cuIndividual::compute_rna(uint rna_idx) const {
 __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     // One thread
     auto &rna = list_rnas[rna_idx];
+    rna.nb_gene = 0;
+    rna.list_gene = nullptr;
     if (rna.errors > PROM_MAX_DIFF) {
-        rna.nb_gene = 0;
-        rna.list_gene = nullptr;
         return;
     }
 
@@ -156,8 +156,10 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     // Let us put their position in a list
 
     rna.nb_gene = local_nb_gene;
-    if (local_nb_gene > 0)
+    if (local_nb_gene > 0) {
         rna.list_gene = new cuGene[local_nb_gene]{};
+        assert(rna.list_gene != nullptr);
+    }
     for (int i = 0; i < rna.nb_gene; ++i) {
         uint start = list_ps[first_next_ps] + SD_TO_START;
         if (start >= size) {
@@ -182,12 +184,15 @@ __device__ void cuIndividual::gather_genes() {
     if (nb_gene > 0) {
         list_gene = new cuGene[nb_gene]{};
         list_protein = new cuProtein[nb_gene]{};
+        assert(list_gene != nullptr);
+        assert(list_protein != nullptr);
     }
     uint insert_idx = 0;
 
     for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
         const auto &rna = list_rnas[idx_rna];
         for (int i = 0; i < rna.nb_gene; ++i) {
+            assert(insert_idx < nb_gene);
             list_gene[insert_idx] = rna.list_gene[i];
             // limit is difference between transcription_length and distance start_rna -> start_gen (computed in `prepare_gene`)
             list_gene[insert_idx].length_limit = rna.transcription_length - list_gene[insert_idx].length_limit;
