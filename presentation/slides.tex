@@ -205,12 +205,19 @@
  \frametitle{Optimizations}
  \begin{itemize}
   \item Working only on diff (where the DNA has changed during the mutation) \textit{i.e.} do not reparse the whole DNA at each generation (available in the git repository for sequential CPU)
+  \item Implement a new version of the algorithm that reduce the memory reads
+  \item Implement and test different algorithms to evaluate the NUMA effect
+  \vfill
   \item Remove the "modulo" that allows to simulate circular DNA (copy a part of the beginning of the DNA at the end to do it)
   \item Change the coding of the DNA from a char array to a bitset
+  \vfill
   \item Vectorization of the comparison between DNA and motifs
   \item Search multiple patterns at once through vectorization
+  \vfill
   \item Evaluate classic mutation operator (malloc+memcpy+mutation) and backtrace mutation operator (malloc+copy)
+  \vfill
   \item One large 1D structure (merge all DNAs into a big DNA) to ease load balancing
+  \vfill
   \item Include metadata (promoter, terminator, start, stop) into a bitset
  \end{itemize}
 \end{frame}
@@ -221,9 +228,9 @@
  \begin{itemize}
   \item OpenMP (parallel for and/or tasks with or without dependencies)
   \item CUDA
-  \item OpenACC
+  \item Kokkos
   \item MPI
-  \item Hybrid \textit{e.g.} OpenMP+OpenACC, OpenMP+MPI, \ldots
+  \item Hybrid \textit{e.g.} Kokkos CPU+GPU, OpenMP+MPI, \ldots
   \vfill
   \item Implement the stencil (\textit{i.e.} asynchronous time between grid cells)
  \end{itemize}
@@ -235,7 +242,7 @@
  \frametitle{Methodology}
 \begin{enumerate}
  \item Use GIT (or another versioning software)
- \item For each optimization/parallelization, tests its performance, scalability (weak and strong) and create visualization of them
+ \item For each optimization/parallelization, tests its performance, scalability (weak and strong) and create visualization of them (\textit{e.g.}, through one or multiple Jupyter notebook)
  \item You need to verify the reproducibility of your code \textit{i.e.}, same parameters must lead to same results
 \end{enumerate}
 \vfill
