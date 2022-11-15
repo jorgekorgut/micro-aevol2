@@ -7,7 +7,8 @@
 #include <vector>
 #include <zlib.h>
 
-#include "Threefry.h"
+#include<bits/stdc++.h>
+
 #include "aevol_constants.h"
 
 class Dna {
@@ -17,7 +18,7 @@ public:
 
     Dna(const Dna &clone) = default;
 
-    Dna(int length, Threefry::Gen &&rng);
+    Dna(int length, std::shared_ptr<std::mt19937_64> rng);
 
     ~Dna() = default;
 

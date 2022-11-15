@@ -36,7 +36,7 @@ using namespace std;
  *
  * @param length : Length of the generated random DNA
  */
-Organism::Organism(int length, Threefry::Gen &&rng) {
+Organism::Organism(int length, std::shared_ptr<std::mt19937_64> rng) {
     rna_count_ = 0;
 
     dna_ = new Dna(length, std::move(rng));

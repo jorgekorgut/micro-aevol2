@@ -27,9 +27,9 @@
 #pragma once
 
 #include <list>
+#include<bits/stdc++.h>
 
 #include "Organism.h"
-#include "Threefry.h"
 #include "MutationEvent.h"
 
 
@@ -39,14 +39,14 @@
 class DnaMutator {
 public:
 
-    DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate);
+    DnaMutator(std::shared_ptr<std::mt19937_64> rng, int length, double mutation_rate);
 
     ~DnaMutator() {
         for (auto repl : mutation_list_) {
             delete repl;
         }
         mutation_list_.clear();
-        delete mut_prng_;
+        //delete mut_prng_;
     }
 
     void generate_mutations();
@@ -60,7 +60,7 @@ public:
     void setMutate(bool mutate) { hasMutate_ = mutate; }
 
     // private:
-    Threefry::Gen *mut_prng_;
+    std::shared_ptr<std::mt19937_64> mut_prng_;
     int length_;
 
     double mutation_rate_;

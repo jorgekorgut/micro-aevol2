@@ -43,7 +43,6 @@ add_library(micro_aevol
         MutationEvent.cpp
         Organism.cpp
         Stats.cpp
-        Threefry.cpp
         Dna.cpp)
 
 target_link_libraries(micro_aevol PUBLIC ZLIB::ZLIB)

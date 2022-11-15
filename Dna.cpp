@@ -6,10 +6,11 @@
 
 #include <cassert>
 
-Dna::Dna(int length, Threefry::Gen &&rng) : seq_(length) {
+Dna::Dna(int length, std::shared_ptr<std::mt19937_64> rng) : seq_(length) {
     // Generate a random genome
+    std::uniform_int_distribution<> distrib(0, 1);
     for (int32_t i = 0; i < length; i++) {
-        seq_[i] = '0' + rng.random(NB_BASE);
+        seq_[i] = '0' + distrib(*rng);
     }
 }
 

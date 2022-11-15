@@ -32,6 +32,7 @@
 #include <zlib.h>
 #include <list>
 #include <cstdint>
+#include<bits/stdc++.h>
 
 #include "RNA.h"
 #include "Protein.h"
@@ -45,7 +46,7 @@
 class Organism {
 
 public:
-    Organism(int length, Threefry::Gen &&rng);
+    Organism(int length, std::shared_ptr<std::mt19937_64> rng);
 
     explicit Organism(const std::shared_ptr<Organism> &clone);
 

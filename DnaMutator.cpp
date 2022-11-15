@@ -35,7 +35,7 @@
  * @param length  : Size of the DNA at the initialization
  * @param mutation_rate : Mutation rate of the organisms
  */
-DnaMutator::DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate) {
+DnaMutator::DnaMutator(std::shared_ptr<std::mt19937_64> mut_prng, int length, double mutation_rate) {
     mut_prng_ = mut_prng;
     length_ = length;
     mutation_rate_ = mutation_rate;
@@ -46,7 +46,8 @@ DnaMutator::DnaMutator(Threefry::Gen *mut_prng, int length, double mutation_rate
  */
 void DnaMutator::generate_mutations() {
     hasMutate_ = false;
-    nb_mut_ = mut_prng_->binomial_random(length_, mutation_rate_);
+    std::binomial_distribution<> d(length_, mutation_rate_);
+    nb_mut_ = d(*mut_prng_);
 
     if (nb_mut_ > 0) {
         for (int i = 0; i < nb_mut_; ++i) {
@@ -63,7 +64,8 @@ void DnaMutator::generate_mutations() {
  * @return The generated mutation event (or nullptr if none was created)
  */
 MutationEvent *DnaMutator::generate_next_mutation(int length) {
-    int pos = mut_prng_->random(length);
+    std::uniform_int_distribution<> distrib(0, length-1);
+    int pos = distrib(*mut_prng_);
 
     auto mevent = new MutationEvent();
     mevent->switch_pos(pos);

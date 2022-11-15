@@ -27,9 +27,8 @@
 #pragma once
 
 #include <memory>
-
+#include <random>
 #include "Abstract_ExpManager.h"
-#include "Threefry.h"
 #include "DnaMutator.h"
 #include "Organism.h"
 #include "Stats.h"
@@ -64,6 +63,33 @@ private:
 
     void selection(int indiv_id) const;
 
+    int32_t roulette_random(double* probs, int32_t nb_elts, bool verbose = false) const
+    {
+        double pick_one = 0.0;
+
+        std::uniform_real_distribution<> distrib(0,1);
+
+        while (pick_one == 0.0)
+        {
+            pick_one = distrib((*rng_));
+            //pickones.push_back(pick_one);
+            //if (verbose) printf("pick one : %f\n",pick_one);
+        }
+
+        int32_t found_org = 0;
+
+        pick_one -= probs[0];
+        while (pick_one > 0)
+        {
+            assert(found_org<nb_elts-1);
+            //pickones3.push_back(probs[found_org+1]);
+
+            pick_one -= probs[++found_org];
+            //pickones2.push_back(pick_one);
+        }
+        return found_org;
+    }
+
     std::shared_ptr<Organism> *internal_organisms_;
     std::shared_ptr<Organism> *prev_internal_organisms_;
     std::shared_ptr<Organism> best_indiv;
@@ -74,7 +100,7 @@ private:
     int nb_indivs_;
 
     int seed_;
-    std::unique_ptr<Threefry> rng_;
+    std::shared_ptr<std::mt19937_64> rng_;
 
     double *target;
 
