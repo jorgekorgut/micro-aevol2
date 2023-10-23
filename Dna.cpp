@@ -20,7 +20,13 @@ int Dna::length() const {
 void Dna::save(gzFile backup_file) {
     int dna_length = length();
     gzwrite(backup_file, &dna_length, sizeof(dna_length));
-    gzwrite(backup_file, seq_.data(), dna_length * sizeof(seq_[0]));
+
+    char tmp_seq[dna_length];
+    for (size_t i = 0; i < dna_length; ++i) {
+		tmp_seq[i] = seq_[i] + '0';
+    }
+
+    gzwrite(backup_file, tmp_seq, dna_length * sizeof(seq_[0]));
 }
 
 void Dna::load(gzFile backup_file) {
@@ -30,7 +36,10 @@ void Dna::load(gzFile backup_file) {
     char tmp_seq[dna_length];
     gzread(backup_file, tmp_seq, dna_length * sizeof(tmp_seq[0]));
 
-    seq_ = std::vector<char>(tmp_seq, tmp_seq + dna_length);
+    seq_ = boost::dynamic_bitset<>(dna_length);
+    for (size_t i = 0; i < dna_length; ++i) {
+		seq_[i] = tmp_seq - '0';
+    }
 }
 
 void Dna::set(int pos, char c) {
@@ -45,7 +54,18 @@ void Dna::set(int pos, char c) {
  */
 void Dna::remove(int pos_1, int pos_2) {
     assert(pos_1 >= 0 && pos_2 >= pos_1 && pos_2 <= seq_.size());
-    seq_.erase(seq_.begin() + pos_1, seq_.begin() + pos_2);
+
+	auto seq_copy = boost::dynamic_bitset<>(seq_);
+
+	if (pos_2 < seq_.size()) {
+		seq_.reset(pos_1, seq_.size() - pos_1);
+		seq_copy.reset(0, pos_2);
+		seq_copy << pos_2 - pos_1;
+
+		seq_ |= seq_copy;
+	}
+
+    seq_.resize(seq_.size() - (pos_2 - pos_1));
 }
 
 /**
@@ -55,11 +75,24 @@ void Dna::remove(int pos_1, int pos_2) {
  * @param seq : the sequence itself
  * @param seq_length : the size of the sequence
  */
-void Dna::insert(int pos, std::vector<char> seq) {
+void Dna::insert(int pos, boost::dynamic_bitset<> &seq) {
 // Insert sequence 'seq' at position 'pos'
     assert(pos >= 0 && pos < seq_.size());
 
-    seq_.insert(seq_.begin() + pos, seq.begin(), seq.end());
+    seq_.resize(seq_.size() + seq.size(), false);
+
+	auto post_bitmask = boost::dynamic_bitset<>(seq_);
+	post_bitmask.reset(0, pos);
+	post_bitmask >>= seq.size();
+
+	auto seq_bitmask = boost::dynamic_bitset<>(seq);
+	seq_bitmask.resize(seq_.size(), false);
+	seq_bitmask >>= pos;
+
+	seq_.reset(pos, seq_.size() - pos);
+
+	seq_ |= seq_bitmask;
+	seq_ |= post_bitmask;
 }
 
 /**
@@ -73,12 +106,11 @@ void Dna::insert(int pos, Dna *seq) {
 // Insert sequence 'seq' at position 'pos'
     assert(pos >= 0 && pos < seq_.size());
 
-    seq_.insert(seq_.begin() + pos, seq->seq_.begin(), seq->seq_.end());
+    insert(pos, seq->seq_);
 }
 
 void Dna::do_switch(int pos) {
-    if (seq_[pos] == '0') seq_[pos] = '1';
-    else seq_[pos] = '0';
+	seq_.flip(pos);
 }
 
 void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
@@ -97,8 +129,10 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                             -----      |
         //                                             pos_2    <-'
         //
-        std::vector<char> seq_dupl =
-                std::vector<char>(seq_.begin() + pos_1, seq_.begin() + pos_2);
+        auto seq_dupl = boost::dynamic_bitset<>(seq_);
+        printf("%lu\n", seq_.size());
+        seq_dupl <<= pos_1;
+        seq_dupl.resize(pos_2 - pos_1);
 
         insert(pos_3, seq_dupl);
     } else { // if (pos_1 >= pos_2)
@@ -114,51 +148,33 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                                  -----
         //
         //
-        std::vector<char>
-                seq_dupl = std::vector<char>(seq_.begin() + pos_1, seq_.end());
-        seq_dupl.insert(seq_dupl.end(), seq_.begin(), seq_.begin() + pos_2);
+        printf("%lu\n", seq_.size());
+        auto seq_begin = boost::dynamic_bitset<>(seq_);
+		seq_begin.resize(pos_2);
 
-        insert(pos_3, seq_dupl);
+        auto seq_end = boost::dynamic_bitset<>(seq_);
+        seq_end <<= pos_1;
+		seq_begin.resize(seq_end.size() - pos_1);
+
+        insert(pos_3, seq_end);
+        insert(pos_3, seq_begin);
     }
 }
 
 int Dna::promoter_at(int pos) {
+
+
     int prom_dist[PROM_SIZE];
 
+	int dist_lead = 0;
     for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++) {
         int search_pos = pos + motif_id;
         if (search_pos >= seq_.size())
             search_pos -= seq_.size();
         // Searching for the promoter
-        prom_dist[motif_id] =
-                PROM_SEQ[motif_id] == seq_[search_pos] ? 0 : 1;
+        dist_lead += (PROM_SEQ[motif_id] - '0') != seq_[search_pos];
 
     }
-
-
-    // Computing if a promoter exists at that position
-    int dist_lead = prom_dist[0] +
-                    prom_dist[1] +
-                    prom_dist[2] +
-                    prom_dist[3] +
-                    prom_dist[4] +
-                    prom_dist[5] +
-                    prom_dist[6] +
-                    prom_dist[7] +
-                    prom_dist[8] +
-                    prom_dist[9] +
-                    prom_dist[10] +
-                    prom_dist[11] +
-                    prom_dist[12] +
-                    prom_dist[13] +
-                    prom_dist[14] +
-                    prom_dist[15] +
-                    prom_dist[16] +
-                    prom_dist[17] +
-                    prom_dist[18] +
-                    prom_dist[19] +
-                    prom_dist[20] +
-                    prom_dist[21];
 
     return dist_lead;
 }
@@ -236,7 +252,7 @@ int Dna::codon_at(int pos) {
         t_pos = pos + i;
         if (t_pos >= seq_.size())
             t_pos -= seq_.size();
-        if (seq_[t_pos] == '1')
+        if (seq_[t_pos])
             value += 1 << (CODON_SIZE - i - 1);
     }
 
