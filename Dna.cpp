@@ -60,7 +60,7 @@ void Dna::remove(int pos_1, int pos_2) {
 	if (pos_2 < seq_.size()) {
 		seq_.reset(pos_1, seq_.size() - pos_1);
 		seq_copy.reset(0, pos_2);
-		seq_copy << pos_2 - pos_1;
+		seq_copy >> pos_2 - pos_1;
 
 		seq_ |= seq_copy;
 	}
@@ -83,11 +83,11 @@ void Dna::insert(int pos, boost::dynamic_bitset<> &seq) {
 
 	auto post_bitmask = boost::dynamic_bitset<>(seq_);
 	post_bitmask.reset(0, pos);
-	post_bitmask >>= seq.size();
+	post_bitmask <<= seq.size();
 
 	auto seq_bitmask = boost::dynamic_bitset<>(seq);
 	seq_bitmask.resize(seq_.size(), false);
-	seq_bitmask >>= pos;
+	seq_bitmask <<= pos;
 
 	seq_.reset(pos, seq_.size() - pos);
 
@@ -131,7 +131,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //
         auto seq_dupl = boost::dynamic_bitset<>(seq_);
         printf("%lu\n", seq_.size());
-        seq_dupl <<= pos_1;
+        seq_dupl >>= pos_1;
         seq_dupl.resize(pos_2 - pos_1);
 
         insert(pos_3, seq_dupl);
@@ -153,7 +153,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 		seq_begin.resize(pos_2);
 
         auto seq_end = boost::dynamic_bitset<>(seq_);
-        seq_end <<= pos_1;
+        seq_end >>= pos_1;
 		seq_begin.resize(seq_end.size() - pos_1);
 
         insert(pos_3, seq_end);
@@ -162,8 +162,6 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 }
 
 int Dna::promoter_at(int pos) {
-
-
     int prom_dist[PROM_SIZE];
 
 	int dist_lead = 0;
@@ -212,7 +210,7 @@ bool Dna::shine_dal_start(int pos) {
         if (t_pos >= seq_.size())
             t_pos -= seq_.size();
 
-        if (seq_[t_pos] == SHINE_DAL_SEQ[k_t]) {
+        if (seq_[t_pos] == (SHINE_DAL_SEQ[k_t] - '0')) {
             start = true;
         } else {
             start = false;
@@ -232,7 +230,7 @@ bool Dna::protein_stop(int pos) {
         if (t_k >= seq_.size())
             t_k -= seq_.size();
 
-        if (seq_[t_k] == PROTEIN_END[k]) {
+        if (seq_[t_k] == PROTEIN_END[k] - '0') {
             is_protein = true;
         } else {
             is_protein = false;
