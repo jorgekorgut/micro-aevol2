@@ -8,9 +8,12 @@
 
 Dna::Dna(int length, Threefry::Gen &&rng) : seq_(length) {
     // Generate a random genome
+    //std::cout << "Dna : " << length << std::endl;
     for (int32_t i = 0; i < length; i++) {
-        seq_[i] = '0' + rng.random(NB_BASE);
+        seq_[i] = rng.random(NB_BASE);
+        //std::cout << "seq_["<<i<<"]" << seq_[i] <<  " ";
     }
+    //std::cout << std::endl;
 }
 
 int Dna::length() const {
@@ -18,15 +21,14 @@ int Dna::length() const {
 }
 
 void Dna::save(gzFile backup_file) {
-    int dna_length = length();
+    size_t dna_length = length();
     gzwrite(backup_file, &dna_length, sizeof(dna_length));
-
     char tmp_seq[dna_length];
     for (size_t i = 0; i < dna_length; ++i) {
 		tmp_seq[i] = seq_[i] + '0';
     }
 
-    gzwrite(backup_file, tmp_seq, dna_length * sizeof(seq_[0]));
+    gzwrite(backup_file, tmp_seq, dna_length * sizeof(tmp_seq[0]));
 }
 
 void Dna::load(gzFile backup_file) {
@@ -103,6 +105,7 @@ void Dna::insert(int pos, boost::dynamic_bitset<> &seq) {
  * @param seq_length : the size of the sequence
  */
 void Dna::insert(int pos, Dna *seq) {
+std::cout << "Insert" << std::endl;
 // Insert sequence 'seq' at position 'pos'
     assert(pos >= 0 && pos < seq_.size());
 
@@ -115,10 +118,10 @@ void Dna::do_switch(int pos) {
 
 void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
     // Duplicate segment [pos_1; pos_2[ and insert the duplicate before pos_3
+    std::cout << "Do_duplication" << std::endl;
     char *duplicate_segment = NULL;
 
     int32_t seg_length;
-
     if (pos_1 < pos_2) {
         //
         //       pos_1         pos_2                   -> 0-
@@ -130,7 +133,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                             pos_2    <-'
         //
         auto seq_dupl = boost::dynamic_bitset<>(seq_);
-        printf("%lu\n", seq_.size());
+
         seq_dupl >>= pos_1;
         seq_dupl.resize(pos_2 - pos_1);
 
@@ -148,7 +151,6 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                                  -----
         //
         //
-        printf("%lu\n", seq_.size());
         auto seq_begin = boost::dynamic_bitset<>(seq_);
 		seq_begin.resize(pos_2);
 
@@ -162,18 +164,24 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 }
 
 int Dna::promoter_at(int pos) {
+    //std::cout << "promoter_at:" << pos << std::endl;
     int prom_dist[PROM_SIZE];
 
 	int dist_lead = 0;
     for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++) {
         int search_pos = pos + motif_id;
+        // Circular search in a array
         if (search_pos >= seq_.size())
+        {
             search_pos -= seq_.size();
+        }
+            
         // Searching for the promoter
+        //std::cout << "bitset access: " << search_pos << std::endl;
         dist_lead += (PROM_SEQ[motif_id] - '0') != seq_[search_pos];
-
     }
 
+    //std::cout << "distance:" << dist_lead << std::endl;
     return dist_lead;
 }
 
