@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
 set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
@@ -34,6 +35,10 @@ if ( USE_OMP )
 endif ( USE_OMP )
 
 find_package(ZLIB REQUIRED)
+
+set(BOOST_ROOT /home/jlprein/docs/boost_1_83_0)
+find_package(Boost 1.83.0 REQUIRED)
+include_directories("${Boost_INCLUDE_DIRS}")
 
 add_library(micro_aevol
         Abstract_ExpManager.cpp

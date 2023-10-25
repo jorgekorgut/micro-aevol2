@@ -165,7 +165,6 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 
 int Dna::promoter_at(int pos) {
     //std::cout << "promoter_at:" << pos << std::endl;
-    int prom_dist[PROM_SIZE];
 
 	int dist_lead = 0;
     for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++) {
@@ -177,7 +176,7 @@ int Dna::promoter_at(int pos) {
         }
             
         // Searching for the promoter
-        //std::cout << "bitset access: " << search_pos << std::endl;
+        // TODO: optimize by using an OR operation and count the set bits?
         dist_lead += (PROM_SEQ[motif_id] - '0') != seq_[search_pos];
     }
 
