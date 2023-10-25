@@ -25,7 +25,7 @@ void Dna::save(gzFile backup_file) {
     gzwrite(backup_file, &dna_length, sizeof(dna_length));
     char tmp_seq[dna_length];
     for (size_t i = 0; i < dna_length; ++i) {
-		tmp_seq[i] = seq_[i] + '0';
+		tmp_seq[i] = seq_[i];
     }
 
     gzwrite(backup_file, tmp_seq, dna_length * sizeof(tmp_seq[0]));
@@ -40,7 +40,7 @@ void Dna::load(gzFile backup_file) {
 
     seq_ = boost::dynamic_bitset<>(dna_length);
     for (size_t i = 0; i < dna_length; ++i) {
-		seq_[i] = tmp_seq - '0';
+		seq_[i] = tmp_seq;
     }
 }
 
@@ -178,7 +178,7 @@ int Dna::promoter_at(int pos) {
             
         // Searching for the promoter
         //std::cout << "bitset access: " << search_pos << std::endl;
-        dist_lead += (PROM_SEQ[motif_id] - '0') != seq_[search_pos];
+        dist_lead += (PROM_SEQ[motif_id]) != seq_[search_pos];
     }
 
     //std::cout << "distance:" << dist_lead << std::endl;
@@ -209,22 +209,43 @@ int Dna::terminator_at(int pos) {
 }
 
 bool Dna::shine_dal_start(int pos) {
-    bool start = false;
-    int t_pos, k_t;
+    bool start = true;
 
-    for (int k = 0; k < SHINE_DAL_SIZE + CODON_SIZE; k++) {
-        k_t = k >= SHINE_DAL_SIZE ? k + SD_START_SPACER : k;
-        t_pos = pos + k_t;
-        if (t_pos >= seq_.size())
-            t_pos -= seq_.size();
+	if (pos + SHINE_DAL_SIZE + CODON_SIZE + SD_START_SPACER > seq_.size()) {
+		int t_pos, k_t;
+		t_pos = pos;
+		for (int k = 0; k < SHINE_DAL_SIZE; k++, t_pos++) {
+			if (t_pos >= seq_.size())
+				t_pos -= seq_.size();
 
-        if (seq_[t_pos] == (SHINE_DAL_SEQ[k_t] - '0')) {
-            start = true;
-        } else {
-            start = false;
-            break;
-        }
-    }
+			if (seq_[t_pos] != SHINE_DAL_SEQ[k]) {
+				start = false;
+				break;
+			}
+		}
+
+		if (!start)
+			return start;
+		t_pos += SD_START_SPACER;
+
+		for (int k = 0; k < CODON_SIZE; ++k, ++t_pos) {
+			if (t_pos >= seq_.size())
+				t_pos -= seq_.size();
+
+			if (seq_[t_pos] != SHINE_DAL_SEQ[k + SHINE_DAL_SIZE + SD_START_SPACER]) {
+				start = false;
+				break;
+			}
+		}
+	} else {
+		auto shine_bitmask = boost::dynamic_bitset<>(SHINE_DAL_SEQ);
+		shine_bitmask.resize(seq_.size());
+		shine_bitmask >>= pos;
+
+		shine_bitmask &= seq_;
+		start = shine_bitmask.any();
+	}
+
 
     return start;
 }
@@ -238,7 +259,7 @@ bool Dna::protein_stop(int pos) {
         if (t_k >= seq_.size())
             t_k -= seq_.size();
 
-        if (seq_[t_k] == PROTEIN_END[k] - '0') {
+        if (seq_[t_k] == PROTEIN_END[k]) {
             is_protein = true;
         } else {
             is_protein = false;

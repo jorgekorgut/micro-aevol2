@@ -9,7 +9,7 @@
 __device__ uint8_t is_promoter(const char* sequence) {
   uint8_t distance = 0;
   for (int offset = 0; offset < PROM_SIZE; ++offset) {
-    if (sequence[offset] != PROM_SEQ[offset]){
+    if (sequence[offset] != '0' + PROM_SEQ[offset]){
       distance++;
       if (distance > PROM_MAX_DIFF)
         return 0b1111;
@@ -29,6 +29,7 @@ __device__ bool is_terminator(const char* sequence) {
 
 __device__ bool is_prot_start(const char* sequence) {
   for (int offset = 0; offset < SHINE_DAL_SIZE; ++offset) {
+	// TODO: fix missing spacer
     if (sequence[offset] != SHINE_DAL_SEQ[offset])
       return false;
   }
@@ -43,7 +44,7 @@ __device__ uint8_t translate_to_codon(const char* seq) {
   uint8_t codon = 0;
 
   for (uint8_t i = 0; i < CODON_SIZE; ++i) {
-    codon += (seq[i] - '0') << (CODON_SIZE - 1 - i);
+    codon += seq[i] << (CODON_SIZE - 1 - i);
   }
 
   return codon;
