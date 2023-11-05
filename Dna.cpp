@@ -137,7 +137,7 @@ void Dna::insert(int pos, Dna *seq)
 void Dna::do_switch(int pos)
 {
     seq_.flip(pos);
-    std::cerr << pos << std::endl;
+    // std::cerr << pos << std::endl;
 }
 
 void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
@@ -216,10 +216,11 @@ int Dna::promoter_at(int pos)
     // else
     // {
     //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
-    //     std::cerr << dist_lead << std::endl;
+    //     
     // }
 
     // std::cout << "distance:" << dist_lead << std::endl;
+    std::cerr << dist_lead << std::endl;
     return dist_lead;
 }
 
