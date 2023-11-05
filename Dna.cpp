@@ -18,9 +18,9 @@ Dna::Dna(int length, Threefry::Gen &&rng)
     }
     seq_ = Bitset(randomSequence, length);
 
-    shine_dal_seq_ = Bitset(SHINE_DAL_SEQ, length);
-    prom_seq = Bitset(PROM_SEQ, length);
-    protein_end = Bitset(PROTEIN_END, length);
+    shine_dal_seq_ = Bitset(SHINE_DAL_SEQ, length, true);
+    prom_seq = Bitset(PROM_SEQ, length, true);
+    protein_end = Bitset(PROTEIN_END, length, true);
 }
 
 int Dna::length() const
@@ -197,7 +197,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
 
 int Dna::promoter_at(int pos)
 {
-    //std::cout << "promoter_at:" << pos << std::endl;
+    // std::cout << "promoter_at:" << pos << std::endl;
     int dist_lead = 0;
     // if (pos + PROM_SIZE >= seq_.bitsetSize())
     {
@@ -214,11 +214,11 @@ int Dna::promoter_at(int pos)
             // std::cout << "bitset access: " << search_pos << std::endl;
             dist_lead += (prom_seq[motif_id]) != seq_[search_pos];
         }
-        std::cout << dist_lead << std::endl;
     }
     // else
     // {
     //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
+    //     std::cerr << dist_lead << std::endl;
     // }
 
     // std::cout << "distance:" << dist_lead << std::endl;
@@ -258,7 +258,7 @@ bool Dna::shine_dal_start(int pos)
 
     size_t bitsetSize = seq_.bitsetSize();
 
-    //if (pos + SHINE_DAL_SIZE + CODON_SIZE + SD_START_SPACER >= bitsetSize)
+    // if (pos + SHINE_DAL_SIZE + CODON_SIZE + SD_START_SPACER >= bitsetSize)
     {
         int t_pos, k_t;
         t_pos = pos;
@@ -309,7 +309,7 @@ bool Dna::protein_stop(int pos)
 
     size_t bitsetSize = seq_.bitsetSize();
 
-    //if (pos + CODON_SIZE >= bitsetSize)
+    // if (pos + CODON_SIZE >= bitsetSize)
     {
         for (int k = 0; k < CODON_SIZE; k++)
         {
@@ -332,7 +332,7 @@ bool Dna::protein_stop(int pos)
     // {
     //     is_protein = seq_.compare(pos, protein_end, 0, CODON_SIZE);
     // }
-
+    
     return is_protein;
 }
 
