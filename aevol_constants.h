@@ -12,7 +12,7 @@ constexpr int8_t CODON_SIZE = 3;
 // promoter
 constexpr int8_t PROM_MAX_DIFF = 4;
 constexpr int8_t PROM_SIZE = 22;
-const std::string PROM_SEQ("0110100100111001101010");
+const std::string PROM_SEQ("0101011001110010010110");
 // terminator
 constexpr int8_t TERM_STEM_SIZE = 4;
 constexpr int8_t TERM_LOOP_SIZE = 3;
@@ -21,9 +21,9 @@ constexpr int8_t TERM_SIZE = TERM_STEM_SIZE + TERM_LOOP_SIZE + TERM_STEM_SIZE;
 constexpr int8_t SHINE_DAL_SIZE = 6;
 constexpr int8_t SD_START_SPACER = 4;
 constexpr int8_t SD_TO_START = SHINE_DAL_SIZE + SD_START_SPACER + CODON_SIZE;
-const std::string SHINE_DAL_SEQ("0000000110110");
+const std::string SHINE_DAL_SEQ("0110110000000");
 // stop
-const std::string PROTEIN_END("100");
+const std::string PROTEIN_END("001");
 
 constexpr int32_t DO_TRANSLATION_LOOP = SHINE_DAL_SIZE + SD_START_SPACER + 3 * CODON_SIZE;
 
