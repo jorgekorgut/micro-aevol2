@@ -137,7 +137,6 @@ void Dna::insert(int pos, Dna *seq)
 void Dna::do_switch(int pos)
 {
     seq_.flip(pos);
-    // std::cerr << pos << std::endl;
 }
 
 void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
@@ -216,11 +215,11 @@ int Dna::promoter_at(int pos)
     // else
     // {
     //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
-    //     
+    //
     // }
 
     // std::cout << "distance:" << dist_lead << std::endl;
-    std::cerr << dist_lead << std::endl;
+    //std::cerr << dist_lead << std::endl;
     return dist_lead;
 }
 
@@ -337,14 +336,14 @@ bool Dna::protein_stop(int pos)
 }
 
 int Dna::codon_at(int pos)
-{   
+{
     int value = 0;
 
     int t_pos;
 
     int bitsetSize = seq_.bitsetSize();
 
-    int mask = 1 << CODON_SIZE-1;
+    int mask = 1 << CODON_SIZE - 1;
     for (int i = 0; i < CODON_SIZE; i++)
     {
         t_pos = pos + i;

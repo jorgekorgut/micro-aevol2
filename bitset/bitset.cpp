@@ -405,7 +405,18 @@ void Bitset::flip(int targetNumber)
     u_int64_t flipMask = 1;
     flipMask <<= currentBlockBiteIndex;
 
-    blocks[currentBlockIndex] ^= flipMask;
+    u_int64_t * currentBlock = blocks + currentBlockIndex;
+
+    *currentBlock = (*currentBlock ^ flipMask);
+
+    /*
+    for (int32_t i = 0; i < bitsetSize(); i++)
+    {
+        std::cerr << this->operator[](i);
+    }
+    std::cerr << std::endl;
+    */
+    
 }
 
 int Bitset::getInsideBlockOffset() const
