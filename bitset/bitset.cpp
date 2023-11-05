@@ -368,7 +368,7 @@ void Bitset::doReset(u_int64_t *blocks, int blockBiteSize, int fromBiteIndex, in
     }
 }
 
-bool Bitset::operator[](int targetNumber)
+bool Bitset::operator[](int targetNumber) const
 {
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;

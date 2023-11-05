@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <boost/dynamic_bitset.hpp>
+#include "bitset/bitset.h"
 
 constexpr int8_t NB_BASE = 2;
 constexpr int8_t CODON_SIZE = 3;
@@ -29,13 +30,13 @@ constexpr int32_t DO_TRANSLATION_LOOP = SHINE_DAL_SIZE + SD_START_SPACER + 3 * C
 
 // Codon
 constexpr int8_t CODON_START = 0b000;
-constexpr int8_t CODON_STOP  = 0b001;
-constexpr int8_t CODON_M0    = 0b100;
-constexpr int8_t CODON_M1    = 0b101;
-constexpr int8_t CODON_W0    = 0b010;
-constexpr int8_t CODON_W1    = 0b011;
-constexpr int8_t CODON_H0    = 0b110;
-constexpr int8_t CODON_H1    = 0b111;
+constexpr int8_t CODON_STOP = 0b001;
+constexpr int8_t CODON_M0 = 0b100;
+constexpr int8_t CODON_M1 = 0b101;
+constexpr int8_t CODON_W0 = 0b010;
+constexpr int8_t CODON_W1 = 0b011;
+constexpr int8_t CODON_H0 = 0b110;
+constexpr int8_t CODON_H1 = 0b111;
 
 // Protein / Fuzzy space
 constexpr double X_MIN = 0.0;
@@ -51,6 +52,11 @@ constexpr int FUZZY_SAMPLING = 300;
 constexpr int SELECTION_PRESSURE = 1000;
 
 // Selection
-constexpr int8_t NEIGHBORHOOD_WIDTH  = 3;
+constexpr int8_t NEIGHBORHOOD_WIDTH = 3;
 constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
-constexpr int8_t NEIGHBORHOOD_SIZE   = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
+constexpr int8_t NEIGHBORHOOD_SIZE = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
+
+// Bitsets
+const Bitset shine_dal_seq_(SHINE_DAL_SEQ, SHINE_DAL_SEQ.size());
+const Bitset prom_seq(PROM_SEQ, PROM_SEQ.size());
+const Bitset protein_end(PROTEIN_END, PROTEIN_END.size());

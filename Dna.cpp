@@ -9,19 +9,14 @@
 Dna::Dna(int length, Threefry::Gen &&rng)
 {
     // Generate a random genome
-    std::cout << "Dna : " << length << std::endl;
+    // std::cout << "Dna : " << length << std::endl;
     std::string randomSequence("");
     for (int32_t i = 0; i < length; i++)
     {
         randomSequence += ('0' + rng.random(NB_BASE));
-        // std::cout << "seq_["<<i<<"]" << seq_[i] <<  " ";
     }
 
     seq_ = Bitset(randomSequence, length);
-
-    shine_dal_seq_ = Bitset(SHINE_DAL_SEQ, length);
-    prom_seq = Bitset(PROM_SEQ, length);
-    protein_end = Bitset(PROTEIN_END, length);
 }
 
 int Dna::length() const
@@ -142,6 +137,7 @@ void Dna::insert(int pos, Dna *seq)
 void Dna::do_switch(int pos)
 {
     seq_.flip(pos);
+    std::cerr << pos << std::endl;
 }
 
 void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
@@ -313,24 +309,24 @@ bool Dna::protein_stop(int pos)
     int bitsetSize = seq_.bitsetSize();
 
     // if (pos + CODON_SIZE >= bitsetSize)
-    {
-        for (int k = 0; k < CODON_SIZE; k++)
-        {
-            t_k = pos + k;
-            if (t_k >= bitsetSize)
-                t_k -= bitsetSize;
 
-            if (seq_[t_k] == protein_end[k])
-            {
-                is_protein = true;
-            }
-            else
-            {
-                is_protein = false;
-                break;
-            }
+    for (int k = 0; k < CODON_SIZE; k++)
+    {
+        t_k = pos + k;
+        if (t_k >= bitsetSize)
+            t_k -= bitsetSize;
+
+        if (seq_[t_k] == protein_end[k])
+        {
+            is_protein = true;
+        }
+        else
+        {
+            is_protein = false;
+            break;
         }
     }
+
     // else
     // {
     //     is_protein = seq_.compare(pos, protein_end, 0, CODON_SIZE);
@@ -340,13 +336,14 @@ bool Dna::protein_stop(int pos)
 }
 
 int Dna::codon_at(int pos)
-{
+{   
     int value = 0;
 
     int t_pos;
 
     int bitsetSize = seq_.bitsetSize();
 
+    int mask = 1 << CODON_SIZE-1;
     for (int i = 0; i < CODON_SIZE; i++)
     {
         t_pos = pos + i;
@@ -357,9 +354,12 @@ int Dna::codon_at(int pos)
 
         if (seq_[t_pos])
         {
-            value += 1 << (CODON_SIZE - i - 1);
+            value |= mask;
         }
+        mask >>= 1;
     }
+
+    // std::cerr << value << std::endl;
 
     return value;
 }

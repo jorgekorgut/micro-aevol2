@@ -21,7 +21,7 @@ public:
 
     Bitset &operator>>=(int shiftNumber);
     Bitset &operator<<=(int shiftNumber);
-    bool operator[](int targetNumber);
+    bool operator[](int targetNumber) const;
 
     u_int64_t *getBlocks() const;
     int getBlockSizeBites() const;

@@ -56,9 +56,4 @@ public:
     int codon_at(int pos);
 
     Bitset seq_;
-
-private:
-    Bitset shine_dal_seq_;
-    Bitset prom_seq;
-    Bitset protein_end;
 };

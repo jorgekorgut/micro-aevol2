@@ -316,6 +316,7 @@ void Organism::compute_protein() {
 
 void Organism::translate_protein() {
     for (int protein_idx = 0; protein_idx < protein_count_; protein_idx++) {
+        
         auto* protein = proteins[protein_idx];
         if (protein->is_init_) {
             int c_pos = protein->protein_start;
@@ -330,6 +331,7 @@ void Organism::translate_protein() {
             int codon_list[FRACTION_SIZE]{};
 
             for (int codon_idx = 0; codon_idx < nb_codon; ++codon_idx) {
+                
                 codon_list[codon_idx] = dna_->codon_at(c_pos);
 
                 c_pos += 3;
