@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
+#SET(GCC_COVERAGE_COMPILE_FLAGS "-static-libstdc++ -static-libgcc -lgomp -static ")
+#SET(GCC_COVERAGE_LINK_FLAGS    "-static-libstdc++ -static-libgcc -lgomp -static ")
 
 set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
 set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
@@ -44,7 +47,8 @@ add_library(micro_aevol
         Organism.cpp
         Stats.cpp
         Threefry.cpp
-        Dna.cpp)
+        Dna.cpp
+        bitset/bitset.cpp)
 
 target_link_libraries(micro_aevol PUBLIC ZLIB::ZLIB)
 

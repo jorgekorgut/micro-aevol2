@@ -10,9 +10,10 @@
 #include "Threefry.h"
 #include "aevol_constants.h"
 
-#include <boost/dynamic_bitset.hpp>
+#include "bitset/bitset.h"
 
-class Dna {
+class Dna
+{
 
 public:
     Dna() = default;
@@ -35,7 +36,7 @@ public:
     void remove(int pos_1, int pos_2);
 
     /// Insert a sequence of a given length at a given position into the DNA of the Organism
-    void insert(int pos, boost::dynamic_bitset<> &seq);
+    void insert(int pos, Bitset &seq);
 
     /// Insert a sequence of a given length at a given position into the DNA of the Organism
     void insert(int pos, Dna *seq);
@@ -54,5 +55,10 @@ public:
 
     int codon_at(int pos);
 
-    boost::dynamic_bitset<> seq_;
+    Bitset seq_;
+
+private:
+    Bitset shine_dal_seq_;
+    Bitset prom_seq;
+    Bitset protein_end;
 };
