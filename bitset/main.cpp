@@ -694,10 +694,10 @@ void assertFlipEdgeCase()
 
 void assertGetMask()
 {
-    std::string bitString("0000000000000000000000000000000000000000000000000000000000011111110111");
+    std::string bitString("0100000000000000000000000000000000000000000000000000000000011111110111");
     Bitset bitset(bitString, bitString.size());
 
-    std::cout << bitset.getMask(63,4) << std::endl;
+    std::cout << bitset.getMask(62,5) << std::endl;
     
 }
 

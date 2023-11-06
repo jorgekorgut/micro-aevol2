@@ -203,53 +203,10 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
 
 int Dna::promoter_at(int pos)
 {
-    // std::cout << "promoter_at:" << pos << std::endl;
-    // int dist_lead = 0;
-    // int bitsetSize = seq_.bitsetSize();
-
-    // if (pos + PROM_SIZE >= bitsetSize)
-    // {
-    //     for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++)
-    //     {
-    //         int search_pos = pos + motif_id;
-    //         // Circular search in a array
-    //         if (search_pos >= bitsetSize)
-    //         {
-    //             search_pos -= bitsetSize;
-    //         }
-
-    //         // Searching for the promoter
-    //         // std::cout << "bitset access: " << search_pos << std::endl;
-    //         dist_lead += (prom_seq[motif_id] != seq_[search_pos]);
-    //     }
-    // }
-    // else
-    // {
-    //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
-    // }
-    // pos = 4995;
     u_int64_t mask = seq_.getMask(pos, PROM_SIZE);
-    // std::cout << mask << std::endl;
-    // assert(1==2);
-    // seq_.print();
-    // std::cout << "pos " << pos << std::endl;
-    // std::cout << "prom_seq " << prom_seq.getBlocks()[1] << std::endl;
-    // std::cout << "comparation " << (mask & prom_seq.getBlocks()[1]) << std::endl;
+    u_int64_t comparation = mask ^ prom_seq.getBlocks()[1];
+    int dist_lead = std::popcount(comparation);
 
-    u_int64_t comparation = mask & prom_seq.getBlocks()[1];
-    u_int64_t comparationMask = 1;
-
-    int dist_lead = PROM_SIZE - std::popcount(comparation);
-
-    if (pos == 4999)
-    {
-        std::cout << comparation << std::endl;
-        std::cerr << dist_lead << std::endl;
-        assert(1 == 2);
-    }
-
-    // std::cout << "distance:" << dist_lead << std::endl;
-    // std::cerr << dist_lead << std::endl;
     return dist_lead;
 }
 
