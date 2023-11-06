@@ -23,6 +23,9 @@ constexpr int8_t SHINE_DAL_SIZE = 6;
 constexpr int8_t SD_START_SPACER = 4;
 constexpr int8_t SD_TO_START = SHINE_DAL_SIZE + SD_START_SPACER + CODON_SIZE;
 const std::string SHINE_DAL_SEQ("0110110000000");
+
+const std::string SHINE_DAL_SEQ_START("011011");
+const std::string SHINE_DAL_SEQ_END("000");
 // stop
 const std::string PROTEIN_END("001");
 
@@ -30,12 +33,12 @@ constexpr int32_t DO_TRANSLATION_LOOP = SHINE_DAL_SIZE + SD_START_SPACER + 3 * C
 
 // Codon
 constexpr int8_t CODON_START = 0b000;
-constexpr int8_t CODON_STOP = 0b001;
-constexpr int8_t CODON_M0 = 0b100;
+constexpr int8_t CODON_STOP = 0b100; //0b001
+constexpr int8_t CODON_M0 = 0b001; //0b100; 
 constexpr int8_t CODON_M1 = 0b101;
 constexpr int8_t CODON_W0 = 0b010;
-constexpr int8_t CODON_W1 = 0b011;
-constexpr int8_t CODON_H0 = 0b110;
+constexpr int8_t CODON_W1 = 0b110; //0b011;
+constexpr int8_t CODON_H0 = 0b011;//0b110;
 constexpr int8_t CODON_H1 = 0b111;
 
 // Protein / Fuzzy space
@@ -57,6 +60,7 @@ constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
 constexpr int8_t NEIGHBORHOOD_SIZE = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
 
 // Bitsets
-const Bitset shine_dal_seq_(SHINE_DAL_SEQ, SHINE_DAL_SEQ.size());
+const Bitset shine_dal_seq_start_(SHINE_DAL_SEQ_START, SHINE_DAL_SEQ_START.size());
+const Bitset shine_dal_seq_end_(SHINE_DAL_SEQ_END, SHINE_DAL_SEQ_END.size());
 const Bitset prom_seq(PROM_SEQ, PROM_SEQ.size());
 const Bitset protein_end(PROTEIN_END, PROTEIN_END.size());

@@ -692,6 +692,15 @@ void assertFlipEdgeCase()
     // assert(entry == entryBitset);
 }
 
+void assertGetMask()
+{
+    std::string bitString("0000000000000000000000000000000000000000000000000000000000011111110111");
+    Bitset bitset(bitString, bitString.size());
+
+    std::cout << bitset.getMask(63,4) << std::endl;
+    
+}
+
 void assertAll()
 {
     assertLeftShiftNotAligned();
@@ -719,6 +728,7 @@ void assertAll()
 int main()
 {
     // assertAll();
-    assertFlipEdgeCase();
+    //assertFlipEdgeCase();
+    assertGetMask();
     return 0;
 }

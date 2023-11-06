@@ -4,6 +4,11 @@
 
 #include "Dna.h"
 
+#include <bit>
+#include <bitset>
+#include <cstdint>
+#include <iostream>
+
 #include <cassert>
 
 Dna::Dna(int length, Threefry::Gen &&rng)
@@ -199,26 +204,48 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
 int Dna::promoter_at(int pos)
 {
     // std::cout << "promoter_at:" << pos << std::endl;
-    int dist_lead = 0;
-    if (pos + PROM_SIZE >= seq_.bitsetSize())
-    {
-        for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++)
-        {
-            int search_pos = pos + motif_id;
-            // Circular search in a array
-            if (search_pos >= seq_.bitsetSize())
-            {
-                search_pos -= seq_.bitsetSize();
-            }
+    // int dist_lead = 0;
+    // int bitsetSize = seq_.bitsetSize();
 
-            // Searching for the promoter
-            // std::cout << "bitset access: " << search_pos << std::endl;
-            dist_lead += (prom_seq[motif_id] != seq_[search_pos]);
-        }
-    }
-    else
+    // if (pos + PROM_SIZE >= bitsetSize)
+    // {
+    //     for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++)
+    //     {
+    //         int search_pos = pos + motif_id;
+    //         // Circular search in a array
+    //         if (search_pos >= bitsetSize)
+    //         {
+    //             search_pos -= bitsetSize;
+    //         }
+
+    //         // Searching for the promoter
+    //         // std::cout << "bitset access: " << search_pos << std::endl;
+    //         dist_lead += (prom_seq[motif_id] != seq_[search_pos]);
+    //     }
+    // }
+    // else
+    // {
+    //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
+    // }
+    // pos = 4995;
+    u_int64_t mask = seq_.getMask(pos, PROM_SIZE);
+    // std::cout << mask << std::endl;
+    // assert(1==2);
+    // seq_.print();
+    // std::cout << "pos " << pos << std::endl;
+    // std::cout << "prom_seq " << prom_seq.getBlocks()[1] << std::endl;
+    // std::cout << "comparation " << (mask & prom_seq.getBlocks()[1]) << std::endl;
+
+    u_int64_t comparation = mask & prom_seq.getBlocks()[1];
+    u_int64_t comparationMask = 1;
+
+    int dist_lead = PROM_SIZE - std::popcount(comparation);
+
+    if (pos == 4999)
     {
-        dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
+        std::cout << comparation << std::endl;
+        std::cerr << dist_lead << std::endl;
+        assert(1 == 2);
     }
 
     // std::cout << "distance:" << dist_lead << std::endl;
@@ -258,121 +285,33 @@ int Dna::terminator_at(int pos)
 
 bool Dna::shine_dal_start(int pos)
 {
-    bool start = true;
-
-    int bitsetSize = seq_.bitsetSize();
-
-    // if (pos + SHINE_DAL_SIZE + CODON_SIZE + SD_START_SPACER >= bitsetSize)
-
-    int t_pos;
-    t_pos = pos;
-    for (int k = 0; k < SHINE_DAL_SIZE; k++, t_pos++)
+    u_int64_t mask_start = seq_.getMask(pos, SHINE_DAL_SIZE);
+    if (shine_dal_seq_start_.getBlocks()[1] != mask_start)
     {
-        if (t_pos >= bitsetSize)
-            t_pos -= bitsetSize;
-
-        if (seq_[t_pos] != shine_dal_seq_[k])
-        {
-            start = false;
-            break;
-        }
+        return false;
     }
 
-    if (!start)
-        return start;
-    t_pos += SD_START_SPACER;
-
-    for (int k = 0; k < CODON_SIZE; ++k, ++t_pos)
+    u_int64_t mask_end = seq_.getMask(pos + SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
+    if (shine_dal_seq_end_.getBlocks()[1] != mask_end)
     {
-        if (t_pos >= bitsetSize)
-            t_pos -= bitsetSize;
-
-        if (seq_[t_pos] != shine_dal_seq_[k + SHINE_DAL_SIZE + SD_START_SPACER])
-        {
-            start = false;
-            break;
-        }
+        return false;
     }
 
-    // else
-    // {
-    //     start = seq_.compareIgnore(pos, shine_dal_seq_, 0, SHINE_DAL_SIZE+SD_START_SPACER+CODON_SIZE, SHINE_DAL_SIZE, SD_START_SPACER);
-    //     /*
-    //     if (start)
-    //     {
-    //         int t_pos = pos + SHINE_DAL_SIZE + SD_START_SPACER;
-    //         //start = seq_.compare(pos + SHINE_DAL_SIZE + SD_START_SPACER, shine_dal_seq_, SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
-    //         for (int k = 0; k < CODON_SIZE; ++k, ++t_pos)
-    //         {
-    //             if (t_pos >= bitsetSize)
-    //                 t_pos -= bitsetSize;
-
-    //             if (seq_[t_pos] != shine_dal_seq_[k + SHINE_DAL_SIZE + SD_START_SPACER])
-    //             {
-    //                 start = false;
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     */
-    // }
-
-    return start;
+    return true;
 }
 
 bool Dna::protein_stop(int pos)
 {
-    bool is_protein;
-    int t_k;
+    u_int64_t mask = seq_.getMask(pos, CODON_SIZE);
 
-    int bitsetSize = seq_.bitsetSize();
-
-    for (int k = 0; k < CODON_SIZE; k++)
-    {
-        t_k = pos + k;
-        if (t_k >= bitsetSize)
-            t_k -= bitsetSize;
-
-        if (seq_[t_k] == protein_end[k])
-        {
-            is_protein = true;
-        }
-        else
-        {
-            is_protein = false;
-            break;
-        }
-    }
+    bool is_protein = (protein_end.getBlocks()[1] == mask);
 
     return is_protein;
 }
 
 int Dna::codon_at(int pos)
 {
-    int value = 0;
-
-    int t_pos;
-
-    int bitsetSize = seq_.bitsetSize();
-
-    int mask = 1 << CODON_SIZE - 1;
-
-    for (int i = 0; i < CODON_SIZE; i++)
-    {
-        t_pos = pos + i;
-        if (t_pos >= bitsetSize)
-        {
-            t_pos -= bitsetSize;
-        }
-
-        if (seq_[t_pos])
-        {
-            value |= mask;
-        }
-        mask >>= 1;
-    }
-
-    // std::cerr << value << std::endl;
+    int value = seq_.getMask(pos, CODON_SIZE);
 
     return value;
 }

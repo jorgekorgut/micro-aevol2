@@ -16,9 +16,11 @@ public:
     size_t bitsetSize() const;
     void set(int targetNumber, bool value);
     void flip(int targetNumber);
-    int getMaskSmallerThanBlock(int pos, int length);
+    u_int64_t getMask(int pos, int length);
     bool compare(int fromIndex, const Bitset &compareTo, int toIndex, int length) const;
     bool compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, int length, int ignoreIndex, int ignoreLength) const;
+    bool containsPatternAtPosition(int position, const Bitset & pattern, int patternLength) const;
+    bool containsPatternAtPositionIgnore(int position, const Bitset &pattern, int patternLength, int ignorePos, int ignoreLength, int postPatternSize) const;
     int compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const;
 
     Bitset &operator>>=(int shiftNumber);

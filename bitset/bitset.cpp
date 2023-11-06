@@ -2,6 +2,7 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <cassert>
 
 int fast_mod(const int input, const int ceil)
 {
@@ -278,42 +279,194 @@ bool Bitset::compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, 
     return (response == 0);
 }
 
-// FIXME: Negative numbers are not taken into account
-int Bitset::getMaskSmallerThanBlock(int pos, int length)
+bool Bitset::containsPatternAtPosition(int position, const Bitset &pattern, int patternLength) const
 {
-    int mask = 0;
+    bool response = true;
+    int blockIndex = position / blockSizeBites + 1;
+    int bitIndex = fast_mod(position, blockSizeBites);
 
-    pos += insideBlockOffset;
-    int blockIndex = pos / blockSizeBites + 1;
-    int bitIndex = fast_mod(pos, blockSizeBites);
-    int globalIterator = 0;
-
-    if (bitIndex < 0)
+    if (bitIndex + pattern.bitsetSize() >= blockSizeBites)
     {
-        blockIndex -= 1;
-        bitIndex = blockSizeBites + bitIndex;
-    }
+        // u_int64_t leftMask = ~0;
+        // leftMask <<= bitIndex;
+        // leftMask = ~leftMask;
+        // u_int64_t patternMaskLeft = leftMask & (pattern.getBlocks()[0] >> bitIndex);
 
-    u_int64_t currentBlock = blocks[blockIndex];
+        // u_int64_t rightMask = ~0;
+        // rightMask >>= pattern.getBlockSizeBites() - bitIndex - 1;
+        // rightMask = ~rightMask;
+        // u_int64_t patternMaskRight = rightMask & (pattern.getBlocks()[0] >> pattern.getBlockSizeBites() - bitIndex - 1);
 
-    currentBlock >>= bitIndex;
+        // response &= (leftMask & blocks[blockIndex] == patternMaskLeft);
+        // response &= (rightMask & blocks[blockIndex + 1] == patternMaskRight);
 
-    while (globalIterator < length)
-    {
-        mask |= ((currentBlock & 1) << length - globalIterator - 1);
-        currentBlock >>= 1;
-
-        ++bitIndex;
-        if (bitIndex >= blockSizeBites)
+        int t_pos = position;
+        for (int k = 0; k < patternLength; k++, t_pos++)
         {
-            ++blockIndex;
-            currentBlock = blocks[blockIndex];
-            bitIndex = 0;
+            if (t_pos >= size)
+            {
+                t_pos -= size;
+            }
+            if (operator[](t_pos) != pattern[k])
+            {
+                response = false;
+                break;
+            }
+        }
+    }
+    else
+    {
+
+        u_int64_t leftMask = ~0;
+        leftMask <<= bitIndex;
+        u_int64_t rightMask = ~0;
+        rightMask <<= bitIndex + patternLength;
+        rightMask = ~rightMask;
+
+        u_int64_t patternMaskLeft = pattern.getBlocks()[1] << bitIndex;
+
+        response = ((leftMask & blocks[blockIndex] & rightMask) == patternMaskLeft);
+    }
+    return response;
+}
+
+bool Bitset::containsPatternAtPositionIgnore(int position, const Bitset &pattern, int patternLength, int ignorePos, int ignoreLength, int postPatternSize) const
+{
+    bool response = true;
+    int blockIndex = position / blockSizeBites + 1;
+    int bitIndex = fast_mod(position, blockSizeBites);
+
+    if (bitIndex + patternLength + ignoreLength + postPatternSize >= blockSizeBites)
+    {
+
+        u_int64_t leftMask = ~0;
+        leftMask <<= bitIndex;
+        u_int64_t patternMaskLeft = leftMask & (pattern.getBlocks()[1] << bitIndex);
+
+        response = (leftMask & blocks[blockIndex] == patternMaskLeft);
+        if (response == false)
+        {
+            return response;
         }
 
-        ++globalIterator;
+        leftMask = ~0;
+        leftMask <<= blockSizeBites - (bitIndex + patternLength);
+        leftMask = ~leftMask;
+
+        u_int64_t patternMaskRight = leftMask & (pattern.getBlocks()[1] >> bitIndex);
+
+        response = (leftMask & blocks[blockIndex] == patternMaskRight);
+
+        if (response == false)
+        {
+            return response;
+        }
+
+        int t_pos = position + patternLength + ignoreLength;
+        int bitsetSize = size;
+
+        for (int k = 0; k < postPatternSize; ++k, ++t_pos)
+        {
+            if (t_pos >= bitsetSize)
+                t_pos -= bitsetSize;
+
+            if (operator[](t_pos) != pattern[k + patternLength + ignoreLength])
+            {
+                response = false;
+                break;
+            }
+        }
     }
-    return mask;
+    else
+    {
+        u_int64_t leftMask = ~0;
+        leftMask <<= bitIndex;
+        u_int64_t rightMask = ~0;
+        rightMask <<= bitIndex + patternLength;
+        rightMask = ~rightMask;
+
+        u_int64_t patternMaskLeft = pattern.getBlocks()[1] << bitIndex;
+        response = ((leftMask & blocks[blockIndex] & rightMask) == (patternMaskLeft));
+        if (response == false)
+        {
+            return response;
+        }
+
+        rightMask = ~0;
+        rightMask <<= bitIndex + patternLength + ignoreLength + postPatternSize;
+        rightMask = ~rightMask;
+
+        u_int64_t ignoreLeftMask = ~0;
+        ignoreLeftMask <<= bitIndex + patternLength;
+        u_int64_t ignoreRightMask = ~0;
+        ignoreRightMask <<= bitIndex + patternLength + ignoreLength;
+        ignoreRightMask = ~ignoreRightMask;
+
+        u_int64_t ignoreMask = ~(ignoreLeftMask & ignoreRightMask);
+        response = ((ignoreMask & leftMask & blocks[blockIndex] & rightMask) == (ignoreMask & patternMaskLeft));
+    }
+    return response;
+}
+
+// FIXME: Negative numbers are not taken into account
+u_int64_t Bitset::getMask(int pos, int length)
+{
+    int correctedIndex = fast_mod(pos, size);
+    u_int64_t value = 0;
+    int blockIndex = correctedIndex / blockSizeBites + 1;
+
+    if (blockIndex > blockCount - 2)
+    {
+        blockIndex = 1;
+    }
+
+    int nextBlockIndex = blockIndex + 1;
+
+    if (nextBlockIndex > blockCount - 2)
+    {
+        nextBlockIndex = 1;
+    }
+
+    int bitIndex = fast_mod(correctedIndex, blockSizeBites);
+
+    // std::cout << "blockIndex: " << blockIndex << std::endl;
+    // std::cout << "block: " << blocks[blockIndex] << std::endl;
+    // std::cout << "nextBlockIndex: " << nextBlockIndex << std::endl;
+    // std::cout << "nextBlock: " << blocks[nextBlockIndex] << std::endl;
+    // std::cout << "correctedIndex: " << correctedIndex << std::endl;
+    // std::cout << "blockSizeBites: " << blockSizeBites << std::endl;
+
+    // std::cout << "bitIndex: " << bitIndex << std::endl;
+
+    if (bitIndex + length >= blockSizeBites || pos + length >= size)
+    {
+        u_int64_t leftMask = ~0;
+        leftMask <<= length;
+        leftMask = ~leftMask;
+
+        value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
+
+        if (pos + length >= size)
+        {
+            int lastBlockRealSize = fast_mod(size, blockSizeBites);
+            value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
+        }
+
+        value = value & leftMask;
+
+    }
+    else
+    {
+        u_int64_t leftMask = ~0;
+        leftMask <<= bitIndex;
+        u_int64_t rightMask = ~0;
+        rightMask <<= bitIndex + length;
+        rightMask = ~rightMask;
+
+        value = (leftMask & blocks[blockIndex] & rightMask) >> bitIndex;
+    }
+
+    return value;
 }
 
 int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const
@@ -478,9 +631,9 @@ void Bitset::doReset(u_int64_t *blocks, int blockBiteSize, int fromBiteIndex, in
         ++currentBlockBiteIndex;
         if (currentBlockBiteIndex >= blockBiteSize)
         {
-            memset(currentBlock, 0,completeBlocksSize*(blockBiteSize/8));
+            memset(currentBlock, 0, completeBlocksSize * (blockBiteSize / 8));
             currentBlock += completeBlocksSize;
-            
+
             currentBlockBiteIndex = 0;
             constMask = 1;
         }
@@ -492,7 +645,7 @@ bool Bitset::operator[](int targetNumber) const
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;
     int currentBlockBiteIndex = fast_mod(targetNumber, blockSizeBites);
-    
+
     return (blocks[currentBlockIndex] >> currentBlockBiteIndex) & 1;
 }
 
