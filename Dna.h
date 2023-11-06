@@ -18,7 +18,7 @@ class Dna
 public:
     Dna() = default;
 
-    Dna(const Dna &clone) = default;
+    Dna(const Dna &clone);
 
     Dna(int length, Threefry::Gen &&rng);
 

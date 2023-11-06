@@ -19,6 +19,10 @@ Dna::Dna(int length, Threefry::Gen &&rng)
     seq_ = Bitset(randomSequence, length);
 }
 
+Dna::Dna(const Dna &clone) : seq_(clone.seq_)
+{
+}
+
 int Dna::length() const
 {
     return seq_.bitsetSize();
@@ -196,7 +200,7 @@ int Dna::promoter_at(int pos)
 {
     // std::cout << "promoter_at:" << pos << std::endl;
     int dist_lead = 0;
-    // if (pos + PROM_SIZE >= seq_.bitsetSize())
+    if (pos + PROM_SIZE >= seq_.bitsetSize())
     {
         for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++)
         {
@@ -212,14 +216,13 @@ int Dna::promoter_at(int pos)
             dist_lead += (prom_seq[motif_id] != seq_[search_pos]);
         }
     }
-    // else
-    // {
-    //     dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
-    //
-    // }
+    else
+    {
+        dist_lead = seq_.compareDistance(pos, prom_seq, 0, PROM_SIZE);
+    }
 
     // std::cout << "distance:" << dist_lead << std::endl;
-    //std::cerr << dist_lead << std::endl;
+    // std::cerr << dist_lead << std::endl;
     return dist_lead;
 }
 
@@ -228,24 +231,28 @@ int Dna::promoter_at(int pos)
 int Dna::terminator_at(int pos)
 {
     int term_dist[TERM_STEM_SIZE];
-    for (int motif_id = 0; motif_id < TERM_STEM_SIZE; motif_id++)
-    {
-        int right = pos + motif_id;
-        int left = pos + (TERM_SIZE - 1) - motif_id;
+    int bitsize = seq_.bitsetSize();
+    int dist_term_lead = 0;
+    
+        for (int motif_id = 0; motif_id < TERM_STEM_SIZE; motif_id++)
+        {
+            int right = pos + motif_id;
+            int left = pos + (TERM_SIZE - 1) - motif_id;
 
-        // loop back the dna inf needed
-        if (right >= length())
-            right -= length();
-        if (left >= length())
-            left -= length();
+            // loop back the dna inf needed
+            if (right >= bitsize)
+                right -= bitsize;
+            if (left >= bitsize)
+                left -= bitsize;
 
-        // Search for the terminators
-        term_dist[motif_id] = seq_[right] != seq_[left] ? 1 : 0;
-    }
-    int dist_term_lead = term_dist[0] +
+            // Search for the terminators
+            term_dist[motif_id] = seq_[right] != seq_[left] ? 1 : 0;
+        }
+        dist_term_lead = term_dist[0] +
                          term_dist[1] +
                          term_dist[2] +
                          term_dist[3];
+    
 
     return dist_term_lead;
 }
@@ -257,45 +264,58 @@ bool Dna::shine_dal_start(int pos)
     int bitsetSize = seq_.bitsetSize();
 
     // if (pos + SHINE_DAL_SIZE + CODON_SIZE + SD_START_SPACER >= bitsetSize)
+
+    int t_pos;
+    t_pos = pos;
+    for (int k = 0; k < SHINE_DAL_SIZE; k++, t_pos++)
     {
-        int t_pos;
-        t_pos = pos;
-        for (int k = 0; k < SHINE_DAL_SIZE; k++, t_pos++)
-        {
-            if (t_pos >= bitsetSize)
-                t_pos -= bitsetSize;
+        if (t_pos >= bitsetSize)
+            t_pos -= bitsetSize;
 
-            if (seq_[t_pos] != shine_dal_seq_[k])
-            {
-                start = false;
-                break;
-            }
+        if (seq_[t_pos] != shine_dal_seq_[k])
+        {
+            start = false;
+            break;
         }
+    }
 
-        if (!start)
-            return start;
-        t_pos += SD_START_SPACER;
+    if (!start)
+        return start;
+    t_pos += SD_START_SPACER;
 
-        for (int k = 0; k < CODON_SIZE; ++k, ++t_pos)
+    for (int k = 0; k < CODON_SIZE; ++k, ++t_pos)
+    {
+        if (t_pos >= bitsetSize)
+            t_pos -= bitsetSize;
+
+        if (seq_[t_pos] != shine_dal_seq_[k + SHINE_DAL_SIZE + SD_START_SPACER])
         {
-            if (t_pos >= bitsetSize)
-                t_pos -= bitsetSize;
-
-            if (seq_[t_pos] != shine_dal_seq_[k + SHINE_DAL_SIZE + SD_START_SPACER])
-            {
-                start = false;
-                break;
-            }
+            start = false;
+            break;
         }
     }
 
     // else
     // {
-    //     start = seq_.compare(pos, shine_dal_seq_, 0, SHINE_DAL_SIZE);
-    //     if(start){
-    //         start = seq_.compare(pos+SHINE_DAL_SIZE+SD_START_SPACER, shine_dal_seq_, SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
+    //     start = seq_.compareIgnore(pos, shine_dal_seq_, 0, SHINE_DAL_SIZE+SD_START_SPACER+CODON_SIZE, SHINE_DAL_SIZE, SD_START_SPACER);
+    //     /*
+    //     if (start)
+    //     {
+    //         int t_pos = pos + SHINE_DAL_SIZE + SD_START_SPACER;
+    //         //start = seq_.compare(pos + SHINE_DAL_SIZE + SD_START_SPACER, shine_dal_seq_, SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
+    //         for (int k = 0; k < CODON_SIZE; ++k, ++t_pos)
+    //         {
+    //             if (t_pos >= bitsetSize)
+    //                 t_pos -= bitsetSize;
+
+    //             if (seq_[t_pos] != shine_dal_seq_[k + SHINE_DAL_SIZE + SD_START_SPACER])
+    //             {
+    //                 start = false;
+    //                 break;
+    //             }
+    //         }
     //     }
-    //     std::cout << start << std::endl;
+    //     */
     // }
 
     return start;
@@ -308,29 +328,29 @@ bool Dna::protein_stop(int pos)
 
     int bitsetSize = seq_.bitsetSize();
 
-    // if (pos + CODON_SIZE >= bitsetSize)
-
-    for (int k = 0; k < CODON_SIZE; k++)
+    if (pos + CODON_SIZE >= bitsetSize)
     {
-        t_k = pos + k;
-        if (t_k >= bitsetSize)
-            t_k -= bitsetSize;
+        for (int k = 0; k < CODON_SIZE; k++)
+        {
+            t_k = pos + k;
+            if (t_k >= bitsetSize)
+                t_k -= bitsetSize;
 
-        if (seq_[t_k] == protein_end[k])
-        {
-            is_protein = true;
-        }
-        else
-        {
-            is_protein = false;
-            break;
+            if (seq_[t_k] == protein_end[k])
+            {
+                is_protein = true;
+            }
+            else
+            {
+                is_protein = false;
+                break;
+            }
         }
     }
-
-    // else
-    // {
-    //     is_protein = seq_.compare(pos, protein_end, 0, CODON_SIZE);
-    // }
+    else
+    {
+        is_protein = seq_.compare(pos, protein_end, 0, CODON_SIZE);
+    }
 
     return is_protein;
 }
@@ -344,19 +364,26 @@ int Dna::codon_at(int pos)
     int bitsetSize = seq_.bitsetSize();
 
     int mask = 1 << CODON_SIZE - 1;
-    for (int i = 0; i < CODON_SIZE; i++)
+    if (pos + CODON_SIZE >= bitsetSize)
     {
-        t_pos = pos + i;
-        if (t_pos >= bitsetSize)
+        for (int i = 0; i < CODON_SIZE; i++)
         {
-            t_pos -= bitsetSize;
-        }
+            t_pos = pos + i;
+            if (t_pos >= bitsetSize)
+            {
+                t_pos -= bitsetSize;
+            }
 
-        if (seq_[t_pos])
-        {
-            value |= mask;
+            if (seq_[t_pos])
+            {
+                value |= mask;
+            }
+            mask >>= 1;
         }
-        mask >>= 1;
+    }
+    else
+    {
+        value = seq_.getMaskSmallerThanBlock(pos, CODON_SIZE);
     }
 
     // std::cerr << value << std::endl;

@@ -8,6 +8,7 @@ public:
     Bitset() = default;
     Bitset(size_t size);
     Bitset(const std::string &bitset, size_t size, bool reverseString = false);
+    Bitset(const Bitset &clone);
     ~Bitset();
     std::string printDebug(u_int64_t *localBlocks, int localBlockSize) const;
     std::string printDebug() const;
@@ -15,8 +16,9 @@ public:
     size_t bitsetSize() const;
     void set(int targetNumber, bool value);
     void flip(int targetNumber);
-
+    int getMaskSmallerThanBlock(int pos, int length);
     bool compare(int fromIndex, const Bitset &compareTo, int toIndex, int length) const;
+    bool compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, int length, int ignoreIndex, int ignoreLength) const;
     int compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const;
 
     Bitset &operator>>=(int shiftNumber);

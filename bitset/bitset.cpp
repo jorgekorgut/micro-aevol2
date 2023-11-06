@@ -3,6 +3,14 @@
 #include <algorithm>
 #include <iostream>
 
+int fast_mod(const int input, const int ceil)
+{
+    // apply the modulo operator only when needed
+    // (i.e. when the input is greater than the ceiling)
+    return input >= ceil ? input % ceil : input;
+    // NB: the assumption here is that the numbers are positive
+}
+
 Bitset::Bitset(size_t bitsetSize)
 {
     blockSizeBytes = sizeof(u_int64_t);
@@ -12,6 +20,17 @@ Bitset::Bitset(size_t bitsetSize)
     blocks = new u_int64_t[blockCount];
 
     std::memset(blocks, 0, sizeof(u_int64_t) * (blockCount));
+}
+
+Bitset::Bitset(const Bitset &clone)
+{
+    blockSizeBytes = sizeof(u_int64_t);
+    blockSizeBites = blockSizeBytes * 8;
+    size = clone.bitsetSize();
+    blockCount = (size / (blockSizeBites) + 1) + 2;
+    blocks = new u_int64_t[blockCount];
+
+    std::memcpy(blocks, clone.getBlocks(), blockSizeBytes * blockCount);
 }
 
 Bitset::Bitset(const std::string &bitset, size_t bitsetSize, bool reverseString)
@@ -36,7 +55,7 @@ Bitset::Bitset(const std::string &bitset, size_t bitsetSize, bool reverseString)
     size_t globalBitIterator = 0;
     int currentBlockIterator = 1;
     int currentIterator = 0;
-    u_int64_t * currentBlock = blocks + currentBlockIterator;
+    u_int64_t *currentBlock = blocks + currentBlockIterator;
 
     while (globalBitIterator < size)
     {
@@ -127,7 +146,7 @@ Bitset &Bitset::operator>>=(int shiftNumber)
     int offsetBlockShift = (insideBlockOffset - shiftNumber) / blockSizeBites; // Take care of offsetBlockShift int overflow
     insideBlockOffset = (insideBlockOffset - shiftNumber) % blockSizeBites;
 
-    std::memmove(blocks, blocks + offsetBlockShift, (blockCount + offsetBlockShift) * blockSizeBytes);
+    std::memcpy(blocks, blocks + offsetBlockShift, (blockCount + offsetBlockShift) * blockSizeBytes);
 
     std::memset(blocks, 0, (-offsetBlockShift) * blockSizeBytes);
     /*
@@ -150,7 +169,7 @@ Bitset &Bitset::operator<<=(int shiftNumber)
     int offsetBlockShift = (insideBlockOffset + shiftNumber) / blockSizeBites; // Take care of offsetBlockShift int overflow
     insideBlockOffset = (insideBlockOffset + shiftNumber) % blockSizeBites;
 
-    std::memmove(blocks, blocks + offsetBlockShift, (blockCount - offsetBlockShift) * blockSizeBytes);
+    std::memcpy(blocks, blocks + offsetBlockShift, (blockCount - offsetBlockShift) * blockSizeBytes);
 
     std::memset(blocks - (blockCount - offsetBlockShift), 0, (offsetBlockShift)*blockSizeBytes);
     /*
@@ -185,10 +204,73 @@ bool Bitset::compare(int fromIndex, const Bitset &compareTo, int toIndex, int le
 
     int response = memcmp(copyCompareToBlocks, copyCompareFromBlocks, lengthBlock * blockSizeBytes);
 
-    delete copyCompareFromBlocks;
-    delete copyCompareToBlocks;
+    delete[] copyCompareFromBlocks;
+    delete[] copyCompareToBlocks;
 
     return (response == 0);
+}
+
+bool Bitset::compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, int length, int ignoreIndex, int ignoreLength) const
+{
+    int lengthBlock = length / blockSizeBites + 1;
+    u_int64_t *copyCompareFromBlocks = new u_int64_t[lengthBlock];
+    u_int64_t *copyCompareToBlocks = new u_int64_t[lengthBlock];
+
+    alignBlocks(copyCompareFromBlocks, fromIndex, copyCompareToBlocks, compareTo, toIndex, length, lengthBlock);
+
+    doReset(copyCompareFromBlocks, blockSizeBites, length, lengthBlock * blockSizeBites);
+    // doReset(copyCompareFromBlocks, blockSizeBites, ignoreIndex, ignoreIndex + ignoreLength - 1);
+    doReset(copyCompareToBlocks, compareTo.getBlockSizeBites(), length, lengthBlock * compareTo.getBlockSizeBites());
+    // doReset(copyCompareToBlocks, compareTo.getBlockSizeBites(), ignoreIndex, ignoreIndex + ignoreLength - 1);
+
+    // std::cout << "Reseted blocks from bitsets: " << std::endl;
+    // this->printDebug(copyCompareFromBlocks, blockSizeBites);
+    // compareTo.printDebug(copyCompareToBlocks, blockSizeBites);
+
+    int response = memcmp(copyCompareToBlocks, copyCompareFromBlocks, lengthBlock * blockSizeBytes);
+
+    delete[] copyCompareFromBlocks;
+    delete[] copyCompareToBlocks;
+
+    return (response == 0);
+}
+
+// FIXME: Negative numbers are not taken into account
+int Bitset::getMaskSmallerThanBlock(int pos, int length)
+{
+    int mask = 0;
+
+    pos += insideBlockOffset;
+    int blockIndex = pos / blockSizeBites + 1;
+    int bitIndex = fast_mod(pos, blockSizeBites);
+    int globalIterator = 0;
+
+    if (bitIndex < 0)
+    {
+        blockIndex -= 1;
+        bitIndex = blockSizeBites + bitIndex;
+    }
+
+    u_int64_t currentBlock = blocks[blockIndex];
+
+    currentBlock >>= bitIndex;
+
+    while (globalIterator < length)
+    {
+        mask |= ((currentBlock & 1) << length - globalIterator - 1);
+        currentBlock >>= 1;
+
+        ++bitIndex;
+        if (bitIndex >= blockSizeBites)
+        {
+            ++blockIndex;
+            currentBlock = blocks[blockIndex];
+            bitIndex = 0;
+        }
+
+        ++globalIterator;
+    }
+    return mask;
 }
 
 int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const
@@ -199,11 +281,9 @@ int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex,
 
     alignBlocks(copyCompareFromBlocks, fromIndex, copyCompareToBlocks, compareTo, toIndex, length, lengthBlock);
 
-    
     // std::cout << "Aligned blocks from bitsets: " << std::endl;
     // this->printDebug(copyCompareFromBlocks, blockSizeBites);
     // compareTo.printDebug(copyCompareToBlocks, blockSizeBites);
-    
 
     int currentBlockIterator = 0;
     int globalBitIterator = 0;
@@ -234,8 +314,8 @@ int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex,
         }
     }
 
-    delete copyCompareFromBlocks;
-    delete copyCompareToBlocks;
+    delete[] copyCompareFromBlocks;
+    delete[] copyCompareToBlocks;
 
     return count;
 }
@@ -256,7 +336,7 @@ void Bitset::alignBlocks(u_int64_t *copyCompareFromBlocks, int fromIndex, u_int6
 
     toIndex += compareTo.getInsideBlockOffset();
     int toBlockIndex = toIndex / compareTo.getBlockSizeBites() + 1;
-    int toBitIndex = toIndex % compareTo.getBlockSizeBites();
+    int toBitIndex = fast_mod(toIndex, compareTo.getBlockSizeBites());
     int toLengthBlock = lengthBlock;
 
     if (toBitIndex < 0)
@@ -268,7 +348,7 @@ void Bitset::alignBlocks(u_int64_t *copyCompareFromBlocks, int fromIndex, u_int6
 
     fromIndex += insideBlockOffset;
     int fromBlockIndex = fromIndex / blockSizeBites + 1;
-    int fromBitIndex = fromIndex % blockSizeBites;
+    int fromBitIndex = fast_mod(fromIndex, blockSizeBites);
     int fromLengthBlock = lengthBlock;
 
     if (fromBitIndex < 0)
@@ -333,7 +413,7 @@ void Bitset::doReset(u_int64_t *blocks, int blockBiteSize, int fromBiteIndex, in
     int distance = toBiteIndex - fromBiteIndex;
     int completeBlocksSize = distance / blockBiteSize;
 
-    int currentBlockBiteIndex = fromBiteIndex % blockBiteSize;
+    int currentBlockBiteIndex = fast_mod(fromBiteIndex, blockBiteSize);
     int currentBlockIndex = fromBiteIndex / blockBiteSize;
 
     u_int64_t *currentBlock = blocks + currentBlockIndex;
@@ -372,7 +452,7 @@ bool Bitset::operator[](int targetNumber) const
 {
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;
-    int currentBlockBiteIndex = targetNumber % blockSizeBites;
+    int currentBlockBiteIndex = fast_mod(targetNumber,blockSizeBites);
 
     u_int64_t mask = 1;
     bool value = (blocks[currentBlockIndex] >> currentBlockBiteIndex) & mask;
@@ -383,7 +463,7 @@ void Bitset::set(int targetNumber, bool value)
 {
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;
-    int currentBlockBiteIndex = targetNumber % blockSizeBites;
+    int currentBlockBiteIndex = fast_mod(targetNumber, blockSizeBites);
     u_int64_t removeMask = 1;
     removeMask <<= currentBlockBiteIndex;
 
@@ -401,14 +481,10 @@ void Bitset::flip(int targetNumber)
 {
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;
-    int currentBlockBiteIndex = targetNumber % blockSizeBites;
+    int currentBlockBiteIndex = fast_mod(targetNumber, blockSizeBites);
     u_int64_t flipMask = 1;
-    flipMask <<= currentBlockBiteIndex;
 
-    u_int64_t * currentBlock = blocks + currentBlockIndex;
-
-    *currentBlock = (*currentBlock ^ flipMask);
-
+    blocks[currentBlockIndex] ^= flipMask << currentBlockBiteIndex;
     /*
     for (int32_t i = 0; i < bitsetSize(); i++)
     {
@@ -416,7 +492,6 @@ void Bitset::flip(int targetNumber)
     }
     std::cerr << std::endl;
     */
-    
 }
 
 int Bitset::getInsideBlockOffset() const
