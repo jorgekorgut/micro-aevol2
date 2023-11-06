@@ -208,6 +208,49 @@ bool Bitset::compare(int fromIndex, const Bitset &compareTo, int toIndex, int le
     delete[] copyCompareToBlocks;
 
     return (response == 0);
+
+    // int globalIterator = 0;
+    // u_int64_t mask = 1;
+
+    // int blockFromIndex = fromIndex / blockSizeBites + 1;
+    // int bitFromIndex = fast_mod(fromIndex, blockSizeBites);
+    // u_int64_t currentFromBlock = blocks[blockFromIndex];
+    // currentFromBlock >>= bitFromIndex;
+
+    // int blockToIndex = toIndex / blockSizeBites + 1;
+    // int bitToIndex = fast_mod(toIndex, blockSizeBites);
+    // u_int64_t currentToBlock = compareTo.getBlocks()[blockToIndex];
+    // currentToBlock >>= bitToIndex;
+
+    // int isEqual = true;
+    // while (isEqual && globalIterator < length)
+    // {
+    //     if((mask & currentFromBlock) == (mask & currentToBlock)){
+    //         isEqual = false;
+    //         break;
+    //     }
+    //     currentFromBlock >>= 1;
+    //     currentToBlock >>= 1;
+
+    //     ++bitToIndex;
+    //     if (bitToIndex >= blockSizeBites)
+    //     {
+    //         ++blockToIndex;
+    //         currentToBlock = compareTo.getBlocks()[blockToIndex];
+    //         bitToIndex = 0;
+    //     }
+
+    //     ++bitFromIndex;
+    //     if (bitFromIndex >= blockSizeBites)
+    //     {
+    //         ++blockFromIndex;
+    //         currentFromBlock = blocks[blockFromIndex];
+    //         bitFromIndex = 0;
+    //     }
+
+    //     ++globalIterator;
+    // }
+    // return isEqual;
 }
 
 bool Bitset::compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, int length, int ignoreIndex, int ignoreLength) const
@@ -435,13 +478,9 @@ void Bitset::doReset(u_int64_t *blocks, int blockBiteSize, int fromBiteIndex, in
         ++currentBlockBiteIndex;
         if (currentBlockBiteIndex >= blockBiteSize)
         {
-            ++currentBlock;
-            for (int completeBlocksIndex = 0; completeBlocksIndex < completeBlocksSize; ++completeBlocksIndex)
-            {
-                (*currentBlock) = 0;
-                ++currentBlock;
-                fromBiteIndex += blockBiteSize;
-            }
+            memset(currentBlock, 0,completeBlocksSize*(blockBiteSize/8));
+            currentBlock += completeBlocksSize;
+            
             currentBlockBiteIndex = 0;
             constMask = 1;
         }
@@ -452,11 +491,9 @@ bool Bitset::operator[](int targetNumber) const
 {
     targetNumber += insideBlockOffset;
     int currentBlockIndex = targetNumber / blockSizeBites + 1;
-    int currentBlockBiteIndex = fast_mod(targetNumber,blockSizeBites);
-
-    u_int64_t mask = 1;
-    bool value = (blocks[currentBlockIndex] >> currentBlockBiteIndex) & mask;
-    return value;
+    int currentBlockBiteIndex = fast_mod(targetNumber, blockSizeBites);
+    
+    return (blocks[currentBlockIndex] >> currentBlockBiteIndex) & 1;
 }
 
 void Bitset::set(int targetNumber, bool value)
