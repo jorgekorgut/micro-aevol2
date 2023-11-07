@@ -14,13 +14,14 @@
 Dna::Dna(int length, Threefry::Gen &&rng)
 {
     // Generate a random genome
-    std::string randomSequence;
-    randomSequence.reserve(length);
+    char sequenceChar[length+1];
     for (int32_t i = 0; i < length; i++)
     {
-        randomSequence += ('0' + rng.random(NB_BASE));
+        sequenceChar[i] = ('0' + rng.random(NB_BASE));
     }
+    sequenceChar[length] = '\0';
 
+    std::string randomSequence(sequenceChar);
     seq_ = Bitset(randomSequence, length);
 }
 

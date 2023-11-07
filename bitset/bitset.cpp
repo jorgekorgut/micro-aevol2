@@ -397,27 +397,24 @@ bool Bitset::containsPatternAtPositionIgnore(int position, const Bitset &pattern
 // FIXME: Negative numbers are not taken into account
 u_int64_t Bitset::getMask(int pos, int length)
 {
-    int correctedIndex = fast_mod(pos, size);
+    if(pos >= size){
+        pos -= size;
+    }
+
     u_int64_t value = 0;
-    int blockIndex = correctedIndex / blockSizeBites + 1;
-
-    if (blockIndex > blockCount - 2)
-    {
-        blockIndex = 1;
-    }
-
-    int nextBlockIndex = blockIndex + 1;
-
-    if (nextBlockIndex > blockCount - 2)
-    {
-        nextBlockIndex = 1;
-    }
-
-    int bitIndex = fast_mod(correctedIndex, blockSizeBites);
+    int blockIndex = pos / blockSizeBites + 1;
+    int bitIndex = fast_mod(pos, blockSizeBites);
 
     // If the mask is truncated by blocks or end of bitset
     if (bitIndex + length >= blockSizeBites || pos + length >= size)
     {
+        int nextBlockIndex = blockIndex + 1;
+
+        if (nextBlockIndex > blockCount - 2)
+        {
+            nextBlockIndex = 1;
+        }
+
         u_int64_t leftMask = 1;
         leftMask <<= length;
         leftMask -= 1;

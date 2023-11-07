@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <cassert>
 
 inline int fast_mod(const int input, const int ceil)
 {
