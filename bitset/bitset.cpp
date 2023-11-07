@@ -6,8 +6,6 @@
 
 Bitset::Bitset(size_t bitsetSize)
 {
-    blockSizeBytes = sizeof(u_int64_t);
-    blockSizeBites = blockSizeBytes * 8;
     size = bitsetSize;
     blockCount = (size / (blockSizeBites) + 1) + 2;
     blocks = new u_int64_t[blockCount];
@@ -17,8 +15,6 @@ Bitset::Bitset(size_t bitsetSize)
 
 Bitset::Bitset(const Bitset &clone)
 {
-    blockSizeBytes = sizeof(u_int64_t);
-    blockSizeBites = blockSizeBytes * 8;
     size = clone.bitsetSize();
     blockCount = (size / (blockSizeBites) + 1) + 2;
     blocks = new u_int64_t[blockCount];
@@ -28,8 +24,6 @@ Bitset::Bitset(const Bitset &clone)
 
 Bitset::Bitset(const std::string &bitset, size_t bitsetSize, bool reverseString)
 {
-    blockSizeBytes = sizeof(u_int64_t);
-    blockSizeBites = blockSizeBytes * 8;
     size = bitsetSize;
     blockCount = (size / (blockSizeBites) + 1) + 2;
     blocks = new u_int64_t[blockCount];
@@ -401,57 +395,54 @@ bool Bitset::containsPatternAtPositionIgnore(int position, const Bitset &pattern
 }
 
 // FIXME: Negative numbers are not taken into account
-// u_int64_t Bitset::getMask(int pos, int length)
-// {
-//     int correctedIndex = fast_mod(pos, size);
-//     u_int64_t value = 0;
-//     int blockIndex = correctedIndex / blockSizeBites + 1;
+u_int64_t Bitset::getMask(int pos, int length)
+{
+    int correctedIndex = fast_mod(pos, size);
+    u_int64_t value = 0;
+    int blockIndex = correctedIndex / blockSizeBites + 1;
 
-//     if (blockIndex > blockCount - 2)
-//     {
-//         blockIndex = 1;
-//     }
+    if (blockIndex > blockCount - 2)
+    {
+        blockIndex = 1;
+    }
 
-//     int nextBlockIndex = blockIndex + 1;
+    int nextBlockIndex = blockIndex + 1;
 
-//     if (nextBlockIndex > blockCount - 2)
-//     {
-//         nextBlockIndex = 1;
-//     }
+    if (nextBlockIndex > blockCount - 2)
+    {
+        nextBlockIndex = 1;
+    }
 
-//     int bitIndex = fast_mod(correctedIndex, blockSizeBites);
+    int bitIndex = fast_mod(correctedIndex, blockSizeBites);
 
-//     // If the mask is truncated by blocks or end of bitset
-//     if (bitIndex + length >= blockSizeBites || pos + length >= size)
-//     {
-//         u_int64_t leftMask = ~0;
-//         leftMask <<= length;
-//         leftMask = ~leftMask;
+    // If the mask is truncated by blocks or end of bitset
+    if (bitIndex + length >= blockSizeBites || pos + length >= size)
+    {
+        u_int64_t leftMask = 1;
+        leftMask <<= length;
+        leftMask -= 1;
 
-//         value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
+        value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
 
-//         if (pos + length >= size)
-//         {
-//             int lastBlockRealSize = fast_mod(size, blockSizeBites);
-//             value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
-//         }
+        if (pos + length >= size)
+        {
+            int lastBlockRealSize = fast_mod(size, blockSizeBites);
+            value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
+        }
 
-//         value = value & leftMask;
+        value = value & leftMask;
+    }
+    else
+    {
+        u_int64_t rightMask = 1;
+        rightMask <<= bitIndex + length;
+        rightMask -= 1;
 
-//     }
-//     else
-//     {
-//         u_int64_t leftMask = ~0;
-//         leftMask <<= bitIndex;
-//         u_int64_t rightMask = ~0;
-//         rightMask <<= bitIndex + length;
-//         rightMask = ~rightMask;
+        value = (blocks[blockIndex] & rightMask) >> bitIndex;
+    }
 
-//         value = (leftMask & blocks[blockIndex] & rightMask) >> bitIndex;
-//     }
-
-//     return value;
-// }
+    return value;
+}
 
 int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const
 {

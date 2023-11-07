@@ -60,7 +60,12 @@ constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
 constexpr int8_t NEIGHBORHOOD_SIZE = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
 
 // Bitsets
-const Bitset shine_dal_seq_start_(SHINE_DAL_SEQ_START, SHINE_DAL_SEQ_START.size());
-const Bitset shine_dal_seq_end_(SHINE_DAL_SEQ_END, SHINE_DAL_SEQ_END.size());
-const Bitset prom_seq(PROM_SEQ, PROM_SEQ.size());
-const Bitset protein_end(PROTEIN_END, PROTEIN_END.size());
+const u_int64_t shine_dal_seq_start_ = 0b110110;//0b011011; //011011
+const u_int64_t shine_dal_seq_end_ = 0b000;
+const u_int64_t prom_seq = 0b0110100100111001101010;//0b0101011001110010010110;
+const u_int64_t protein_end = 0b100;
+
+// const Bitset shine_dal_seq_start_(SHINE_DAL_SEQ_START, SHINE_DAL_SEQ_START.size());
+// const Bitset shine_dal_seq_end_(SHINE_DAL_SEQ_END, SHINE_DAL_SEQ_END.size());
+// const Bitset prom_seq(PROM_SEQ, PROM_SEQ.size());
+// const Bitset protein_end(PROTEIN_END, PROTEIN_END.size());

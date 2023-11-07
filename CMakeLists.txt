@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_BUILD_TYPE Debug)
 #set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
 #SET(GCC_COVERAGE_COMPILE_FLAGS "-static-libstdc++ -static-libgcc -lgomp -static ")
 #SET(GCC_COVERAGE_LINK_FLAGS    "-static-libstdc++ -static-libgcc -lgomp -static ")

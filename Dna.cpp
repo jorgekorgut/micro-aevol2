@@ -14,8 +14,8 @@
 Dna::Dna(int length, Threefry::Gen &&rng)
 {
     // Generate a random genome
-    // std::cout << "Dna : " << length << std::endl;
-    std::string randomSequence("");
+    std::string randomSequence;
+    randomSequence.reserve(length);
     for (int32_t i = 0; i < length; i++)
     {
         randomSequence += ('0' + rng.random(NB_BASE));
@@ -26,6 +26,7 @@ Dna::Dna(int length, Threefry::Gen &&rng)
 
 Dna::Dna(const Dna &clone) : seq_(clone.seq_)
 {
+
 }
 
 int Dna::length() const
@@ -204,7 +205,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3)
 int Dna::promoter_at(int pos)
 {
     u_int64_t mask = seq_.getMask(pos, PROM_SIZE);
-    u_int64_t comparation = mask ^ prom_seq.getBlocks()[1];
+    u_int64_t comparation = mask ^ prom_seq;
     int dist_lead = std::popcount(comparation);
 
     return dist_lead;
@@ -229,13 +230,13 @@ int Dna::terminator_at(int pos)
 bool Dna::shine_dal_start(int pos)
 {
     u_int64_t mask_start = seq_.getMask(pos, SHINE_DAL_SIZE);
-    if (shine_dal_seq_start_.getBlocks()[1] != mask_start)
+    if (shine_dal_seq_start_ != mask_start)
     {
         return false;
     }
 
     u_int64_t mask_end = seq_.getMask(pos + SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
-    if (shine_dal_seq_end_.getBlocks()[1] != mask_end)
+    if (shine_dal_seq_end_ != mask_end)
     {
         return false;
     }
@@ -247,7 +248,7 @@ bool Dna::protein_stop(int pos)
 {
     u_int64_t mask = seq_.getMask(pos, CODON_SIZE);
 
-    bool is_protein = (protein_end.getBlocks()[1] == mask);
+    bool is_protein = (protein_end == mask);
 
     return is_protein;
 }

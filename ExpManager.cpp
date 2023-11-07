@@ -25,7 +25,6 @@
 //
 // ***************************************************************************************************************
 
-
 #include <iostream>
 #include <zlib.h>
 
@@ -51,7 +50,8 @@ using namespace std;
  */
 ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutation_rate, int init_length_dna,
                        int backup_step)
-        : seed_(seed), rng_(new Threefry(grid_width, grid_height, seed)) {
+    : seed_(seed), rng_(new Threefry(grid_width, grid_height, seed))
+{
     // Initializing the data structure
     grid_height_ = grid_height;
     grid_width_ = grid_width;
@@ -75,8 +75,9 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
 
     target = new double[FUZZY_SAMPLING];
     double geometric_area = 0.0;
-    for (int i = 0; i < FUZZY_SAMPLING; i++) {
-        double pt_i = ((double) i) / (double) FUZZY_SAMPLING;
+    for (int i = 0; i < FUZZY_SAMPLING; i++)
+    {
+        double pt_i = ((double)i) / (double)FUZZY_SAMPLING;
 
         double tmp = g1->compute_y(pt_i);
         tmp += g2->compute_y(pt_i);
@@ -95,16 +96,17 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
 
     printf("Initialized environmental target %f\n", geometric_area);
 
-
     // Initializing the PRNGs
-    for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id)
+    {
         dna_mutator_array_[indiv_id] = nullptr;
     }
 
     // Generate a random organism that is better than nothing
     double r_compare = 0;
 
-    while (r_compare >= 0) {
+    while (r_compare >= 0)
+    {
         auto random_organism = std::make_shared<Organism>(init_length_dna, rng_->gen(0, Threefry::MUTATION));
         random_organism->locate_promoters();
         random_organism->evaluate(target);
@@ -113,14 +115,15 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
         r_compare = round((random_organism->metaerror - geometric_area) * 1E10) / 1E10;
     }
 
-//    internal_organisms_[0]->print_info();
+    //    internal_organisms_[0]->print_info();
 
     printf("Populating the environment\n");
 
     // Create a population of clones based on the randomly generated organism
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id] =
-                std::make_shared<Organism>(internal_organisms_[0]);
+            std::make_shared<Organism>(internal_organisms_[0]);
     }
 
     // Create backup and stats directory
@@ -132,24 +135,26 @@ ExpManager::ExpManager(int grid_height, int grid_width, int seed, double mutatio
  *
  * @param time : resume from this generation
  */
-ExpManager::ExpManager(int time) {
+ExpManager::ExpManager(int time)
+{
     target = new double[FUZZY_SAMPLING];
 
     load(time);
 
     double geometric_area = 0;
-    for (int i = 0; i < FUZZY_SAMPLING - 1; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING - 1; i++)
+    {
         // Computing a trapezoid area
-        geometric_area += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double) FUZZY_SAMPLING));
+        geometric_area += ((fabs(target[i]) + fabs(target[i + 1])) / (2 * (double)FUZZY_SAMPLING));
     }
 
     printf("Initialized environmental target %f\n", geometric_area);
 
     dna_mutator_array_ = new DnaMutator *[nb_indivs_];
-    for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id)
+    {
         dna_mutator_array_[indiv_id] = nullptr;
     }
-
 }
 
 /**
@@ -157,7 +162,8 @@ ExpManager::ExpManager(int time) {
  *
  * @param t : simulated time of the checkpoint
  */
-void ExpManager::save(int t) const {
+void ExpManager::save(int t) const
+{
 
     char exp_backup_file_name[255];
 
@@ -168,16 +174,15 @@ void ExpManager::save(int t) const {
     // -------------------------------------------------------------------------
     gzFile exp_backup_file = gzopen(exp_backup_file_name, "w");
 
-
     // -------------------------------------------------------------------------
     // Check that files were correctly opened
     // -------------------------------------------------------------------------
-    if (exp_backup_file == Z_NULL) {
+    if (exp_backup_file == Z_NULL)
+    {
         printf("Error: could not open backup file %s\n",
                exp_backup_file_name);
         exit(EXIT_FAILURE);
     }
-
 
     // -------------------------------------------------------------------------
     // Write the backup file
@@ -191,18 +196,21 @@ void ExpManager::save(int t) const {
 
     gzwrite(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
 
-    for (int i = 0; i < FUZZY_SAMPLING; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING; i++)
+    {
         double tmp = target[i];
         gzwrite(exp_backup_file, &tmp, sizeof(tmp));
     }
 
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         prev_internal_organisms_[indiv_id]->save(exp_backup_file);
     }
 
     rng_->save(exp_backup_file);
 
-    if (gzclose(exp_backup_file) != Z_OK) {
+    if (gzclose(exp_backup_file) != Z_OK)
+    {
         cerr << "Error while closing backup file" << endl;
     }
 }
@@ -212,7 +220,8 @@ void ExpManager::save(int t) const {
  *
  * @param t : resuming the simulation at this generation
  */
-void ExpManager::load(int t) {
+void ExpManager::load(int t)
+{
 
     char exp_backup_file_name[255];
 
@@ -223,16 +232,15 @@ void ExpManager::load(int t) {
     // -------------------------------------------------------------------------
     gzFile exp_backup_file = gzopen(exp_backup_file_name, "r");
 
-
     // -------------------------------------------------------------------------
     // Check that files were correctly opened
     // -------------------------------------------------------------------------
-    if (exp_backup_file == Z_NULL) {
+    if (exp_backup_file == Z_NULL)
+    {
         printf("Error: could not open backup file %s\n",
                exp_backup_file_name);
         exit(EXIT_FAILURE);
     }
-
 
     // -------------------------------------------------------------------------
     // Write the backup file
@@ -257,21 +265,24 @@ void ExpManager::load(int t) {
 
     gzread(exp_backup_file, &mutation_rate_, sizeof(mutation_rate_));
 
-    for (int i = 0; i < FUZZY_SAMPLING; i++) {
+    for (int i = 0; i < FUZZY_SAMPLING; i++)
+    {
         double tmp;
         gzread(exp_backup_file, &tmp, sizeof(tmp));
         target[i] = tmp;
     }
 
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id] =
-                std::make_shared<Organism>(exp_backup_file);
+            std::make_shared<Organism>(exp_backup_file);
     }
 
     rng_ = std::move(std::make_unique<Threefry>(grid_width_, grid_height_, exp_backup_file));
     seed_ = rng_->get_seed();
 
-    if (gzclose(exp_backup_file) != Z_OK) {
+    if (gzclose(exp_backup_file) != Z_OK)
+    {
         cerr << "Error while closing backup file" << endl;
     }
 }
@@ -279,7 +290,8 @@ void ExpManager::load(int t) {
 /**
  * Destructor of the ExpManager class
  */
-ExpManager::~ExpManager() {
+ExpManager::~ExpManager()
+{
     delete stats_best;
     delete stats_mean;
 
@@ -294,9 +306,10 @@ ExpManager::~ExpManager() {
 /**
  * Selection process: for a given cell in the grid of the population, compute which organism win the computation
  *
-  * @param indiv_id : Unique identification number of the cell
+ * @param indiv_id : Unique identification number of the cell
  */
-void ExpManager::selection(int indiv_id) const {
+void ExpManager::selection(int indiv_id) const
+{
     double local_fit_array[NEIGHBORHOOD_SIZE];
     double probs[NEIGHBORHOOD_SIZE];
     int count = 0;
@@ -307,8 +320,10 @@ void ExpManager::selection(int indiv_id) const {
 
     int cur_x, cur_y;
 
-    for (int8_t i = -1; i < NEIGHBORHOOD_WIDTH - 1; i++) {
-        for (int8_t j = -1; j < NEIGHBORHOOD_HEIGHT - 1; j++) {
+    for (int8_t i = -1; i < NEIGHBORHOOD_WIDTH - 1; i++)
+    {
+        for (int8_t j = -1; j < NEIGHBORHOOD_HEIGHT - 1; j++)
+        {
             cur_x = (x + i + grid_width_) % grid_width_;
             cur_y = (y + j + grid_height_) % grid_height_;
 
@@ -319,7 +334,8 @@ void ExpManager::selection(int indiv_id) const {
         }
     }
 
-    for (int8_t i = 0; i < NEIGHBORHOOD_SIZE; i++) {
+    for (int8_t i = 0; i < NEIGHBORHOOD_SIZE; i++)
+    {
         probs[i] = local_fit_array[i] / sum_local_fit;
     }
 
@@ -338,18 +354,22 @@ void ExpManager::selection(int indiv_id) const {
  *
  * @param indiv_id : Organism unique id
  */
-void ExpManager::prepare_mutation(int indiv_id) const {
+void ExpManager::prepare_mutation(int indiv_id) const
+{
     auto *rng = new Threefry::Gen(std::move(rng_->gen(indiv_id, Threefry::MUTATION)));
     const shared_ptr<Organism> &parent = prev_internal_organisms_[next_generation_reproducer_[indiv_id]];
     dna_mutator_array_[indiv_id] = new DnaMutator(
-            rng,
-            parent->length(),
-            mutation_rate_);
+        rng,
+        parent->length(),
+        mutation_rate_);
     dna_mutator_array_[indiv_id]->generate_mutations();
 
-    if (dna_mutator_array_[indiv_id]->hasMutate()) {
+    if (dna_mutator_array_[indiv_id]->hasMutate())
+    {
         internal_organisms_[indiv_id] = std::make_shared<Organism>(parent);
-    } else {
+    }
+    else
+    {
         int parent_id = next_generation_reproducer_[indiv_id];
 
         internal_organisms_[indiv_id] = prev_internal_organisms_[parent_id];
@@ -361,14 +381,18 @@ void ExpManager::prepare_mutation(int indiv_id) const {
  * Execute a generation of the simulation for all the Organisms
  *
  */
-void ExpManager::run_a_step() {
+void ExpManager::run_a_step()
+{
 
     // Running the simulation process for each organism
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    // TODO: Parallel
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         selection(indiv_id);
         prepare_mutation(indiv_id);
 
-        if (dna_mutator_array_[indiv_id]->hasMutate()) {
+        if (dna_mutator_array_[indiv_id]->hasMutate())
+        {
             auto &mutant = internal_organisms_[indiv_id];
             mutant->apply_mutations(dna_mutator_array_[indiv_id]->mutation_list_);
             mutant->evaluate(target);
@@ -376,7 +400,8 @@ void ExpManager::run_a_step() {
     }
 
     // Swap Population
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         prev_internal_organisms_[indiv_id] = internal_organisms_[indiv_id];
         internal_organisms_[indiv_id] = nullptr;
     }
@@ -384,8 +409,10 @@ void ExpManager::run_a_step() {
     // Search for the best
     double best_fitness = prev_internal_organisms_[0]->fitness;
     int idx_best = 0;
-    for (int indiv_id = 1; indiv_id < nb_indivs_; indiv_id++) {
-        if (prev_internal_organisms_[indiv_id]->fitness > best_fitness) {
+    for (int indiv_id = 1; indiv_id < nb_indivs_; indiv_id++)
+    {
+        if (prev_internal_organisms_[indiv_id]->fitness > best_fitness)
+        {
             idx_best = indiv_id;
             best_fitness = prev_internal_organisms_[indiv_id]->fitness;
         }
@@ -396,7 +423,8 @@ void ExpManager::run_a_step() {
     stats_best->reinit(AeTime::time());
     stats_mean->reinit(AeTime::time());
 
-    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+    for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+    {
         if (dna_mutator_array_[indiv_id]->hasMutate())
             prev_internal_organisms_[indiv_id]->compute_protein_stats();
     }
@@ -405,17 +433,18 @@ void ExpManager::run_a_step() {
     stats_mean->write_average(prev_internal_organisms_, nb_indivs_);
 }
 
-
 /**
  * Run the evolution for a given number of generation
  *
  * @param nb_gen : Number of generations to simulate
  */
-void ExpManager::run_evolution(int nb_gen) {
+void ExpManager::run_evolution(int nb_gen)
+{
     INIT_TRACER("trace.csv", {"FirstEvaluation", "STEP"});
 
     TIMESTAMP(0, {
-        for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+        for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++)
+        {
             internal_organisms_[indiv_id]->locate_promoters();
             prev_internal_organisms_[indiv_id]->evaluate(target);
             prev_internal_organisms_[indiv_id]->compute_protein_stats();
@@ -429,7 +458,8 @@ void ExpManager::run_evolution(int nb_gen) {
 
     printf("Running evolution from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
 
-    for (int gen = 0; gen < nb_gen; gen++) {
+    for (int gen = 0; gen < nb_gen; gen++)
+    {
         AeTime::plusplus();
 
         TIMESTAMP(1, run_a_step();)
@@ -437,12 +467,14 @@ void ExpManager::run_evolution(int nb_gen) {
         printf("Generation %d : Best individual fitness %e\n", AeTime::time(), best_indiv->fitness);
         FLUSH_TRACES(gen)
 
-        for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id) {
+        for (int indiv_id = 0; indiv_id < nb_indivs_; ++indiv_id)
+        {
             delete dna_mutator_array_[indiv_id];
             dna_mutator_array_[indiv_id] = nullptr;
         }
 
-        if (AeTime::time() % backup_step_ == 0) {
+        if (AeTime::time() % backup_step_ == 0)
+        {
             save(AeTime::time());
             cout << "Backup for generation " << AeTime::time() << " done !" << endl;
         }

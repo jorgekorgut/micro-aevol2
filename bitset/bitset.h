@@ -24,56 +24,7 @@ public:
     size_t bitsetSize() const;
     void set(int targetNumber, bool value);
     void flip(int targetNumber);
-    inline u_int64_t getMask(int pos, int length)
-    {
-        int correctedIndex = fast_mod(pos, size);
-        u_int64_t value = 0;
-        int blockIndex = correctedIndex / blockSizeBites + 1;
-
-        if (blockIndex > blockCount - 2)
-        {
-            blockIndex = 1;
-        }
-
-        int nextBlockIndex = blockIndex + 1;
-
-        if (nextBlockIndex > blockCount - 2)
-        {
-            nextBlockIndex = 1;
-        }
-
-        int bitIndex = fast_mod(correctedIndex, blockSizeBites);
-
-        // If the mask is truncated by blocks or end of bitset
-        if (bitIndex + length >= blockSizeBites || pos + length >= size)
-        {
-            u_int64_t leftMask = ~0;
-            leftMask <<= length;
-            leftMask = ~leftMask;
-
-            value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
-
-            if (pos + length >= size)
-            {
-                int lastBlockRealSize = fast_mod(size, blockSizeBites);
-                value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
-            }
-
-            value = value & leftMask;
-        }
-        else
-        {
-            u_int64_t leftMask = ~0;
-            leftMask <<= bitIndex;
-            u_int64_t rightMask = ~0;
-            rightMask <<= bitIndex + length;
-            rightMask = ~rightMask;
-
-            value = (leftMask & blocks[blockIndex] & rightMask) >> bitIndex;
-        }
-
-        return value;
-    }
+    u_int64_t getMask(int pos, int length);
     bool compare(int fromIndex, const Bitset &compareTo, int toIndex, int length) const;
     bool compareIgnore(int fromIndex, const Bitset &compareTo, int toIndex, int length, int ignoreIndex, int ignoreLength) const;
     bool containsPatternAtPosition(int position, const Bitset &pattern, int patternLength) const;
@@ -98,10 +49,10 @@ private:
     int size = 0;
 
     // number of bytes in 1 block
-    int blockSizeBytes = 0;
+    const static int blockSizeBytes = sizeof(u_int64_t);
 
     // number of bites in 1 block (blockSizeBytes * 8)
-    int blockSizeBites = 0;
+    const static int blockSizeBites = blockSizeBytes * 8;
 
     // Number of blocks in the bitset
     int blockCount = 0;
