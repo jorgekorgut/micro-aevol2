@@ -214,30 +214,6 @@ int Dna::promoter_at(int pos)
 // a terminator look like : a b c d X X !d !c !b !a
 int Dna::terminator_at(int pos)
 {
-    // int term_dist[TERM_STEM_SIZE];
-    // int bitsize = seq_.bitsetSize();
-    // int dist_term_lead = 0;
-
-    // for (int motif_id = 0; motif_id < TERM_STEM_SIZE; motif_id++)
-    // {
-    //     int right = pos + motif_id;
-    //     int left = pos + (TERM_SIZE - 1) - motif_id;
-
-    //     // loop back the dna inf needed
-    //     if (right >= bitsize)
-    //         right -= bitsize;
-    //     if (left >= bitsize)
-    //         left -= bitsize;
-
-    //     // Search for the terminators
-    //     term_dist[motif_id] = seq_[right] != seq_[left] ? 1 : 0;
-    // }
-    // dist_term_lead = term_dist[0] +
-    //                  term_dist[1] +
-    //                  term_dist[2] +
-    //                  term_dist[3];
-
-    // return dist_term_lead;
     u_int64_t leftMask = seq_.getMask(pos, TERM_STEM_SIZE);
     u_int64_t rightMask = seq_.getMask(pos + TERM_SIZE - TERM_STEM_SIZE, TERM_STEM_SIZE);
 

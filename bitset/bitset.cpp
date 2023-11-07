@@ -4,14 +4,6 @@
 #include <iostream>
 #include <cassert>
 
-int fast_mod(const int input, const int ceil)
-{
-    // apply the modulo operator only when needed
-    // (i.e. when the input is greater than the ceiling)
-    return input >= ceil ? input % ceil : input;
-    // NB: the assumption here is that the numbers are positive
-}
-
 Bitset::Bitset(size_t bitsetSize)
 {
     blockSizeBytes = sizeof(u_int64_t);
@@ -409,65 +401,57 @@ bool Bitset::containsPatternAtPositionIgnore(int position, const Bitset &pattern
 }
 
 // FIXME: Negative numbers are not taken into account
-u_int64_t Bitset::getMask(int pos, int length)
-{
-    int correctedIndex = fast_mod(pos, size);
-    u_int64_t value = 0;
-    int blockIndex = correctedIndex / blockSizeBites + 1;
+// u_int64_t Bitset::getMask(int pos, int length)
+// {
+//     int correctedIndex = fast_mod(pos, size);
+//     u_int64_t value = 0;
+//     int blockIndex = correctedIndex / blockSizeBites + 1;
 
-    if (blockIndex > blockCount - 2)
-    {
-        blockIndex = 1;
-    }
+//     if (blockIndex > blockCount - 2)
+//     {
+//         blockIndex = 1;
+//     }
 
-    int nextBlockIndex = blockIndex + 1;
+//     int nextBlockIndex = blockIndex + 1;
 
-    if (nextBlockIndex > blockCount - 2)
-    {
-        nextBlockIndex = 1;
-    }
+//     if (nextBlockIndex > blockCount - 2)
+//     {
+//         nextBlockIndex = 1;
+//     }
 
-    int bitIndex = fast_mod(correctedIndex, blockSizeBites);
+//     int bitIndex = fast_mod(correctedIndex, blockSizeBites);
 
-    // std::cout << "blockIndex: " << blockIndex << std::endl;
-    // std::cout << "block: " << blocks[blockIndex] << std::endl;
-    // std::cout << "nextBlockIndex: " << nextBlockIndex << std::endl;
-    // std::cout << "nextBlock: " << blocks[nextBlockIndex] << std::endl;
-    // std::cout << "correctedIndex: " << correctedIndex << std::endl;
-    // std::cout << "blockSizeBites: " << blockSizeBites << std::endl;
+//     // If the mask is truncated by blocks or end of bitset
+//     if (bitIndex + length >= blockSizeBites || pos + length >= size)
+//     {
+//         u_int64_t leftMask = ~0;
+//         leftMask <<= length;
+//         leftMask = ~leftMask;
 
-    // std::cout << "bitIndex: " << bitIndex << std::endl;
+//         value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
 
-    if (bitIndex + length >= blockSizeBites || pos + length >= size)
-    {
-        u_int64_t leftMask = ~0;
-        leftMask <<= length;
-        leftMask = ~leftMask;
+//         if (pos + length >= size)
+//         {
+//             int lastBlockRealSize = fast_mod(size, blockSizeBites);
+//             value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
+//         }
 
-        value = blocks[blockIndex] >> bitIndex | blocks[nextBlockIndex] << (blockSizeBites - bitIndex);
+//         value = value & leftMask;
 
-        if (pos + length >= size)
-        {
-            int lastBlockRealSize = fast_mod(size, blockSizeBites);
-            value |= blocks[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
-        }
+//     }
+//     else
+//     {
+//         u_int64_t leftMask = ~0;
+//         leftMask <<= bitIndex;
+//         u_int64_t rightMask = ~0;
+//         rightMask <<= bitIndex + length;
+//         rightMask = ~rightMask;
 
-        value = value & leftMask;
+//         value = (leftMask & blocks[blockIndex] & rightMask) >> bitIndex;
+//     }
 
-    }
-    else
-    {
-        u_int64_t leftMask = ~0;
-        leftMask <<= bitIndex;
-        u_int64_t rightMask = ~0;
-        rightMask <<= bitIndex + length;
-        rightMask = ~rightMask;
-
-        value = (leftMask & blocks[blockIndex] & rightMask) >> bitIndex;
-    }
-
-    return value;
-}
+//     return value;
+// }
 
 int Bitset::compareDistance(int fromIndex, const Bitset &compareTo, int toIndex, int length) const
 {
