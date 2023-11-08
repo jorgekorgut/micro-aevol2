@@ -38,7 +38,7 @@ void Dna::load(gzFile backup_file) {
     char tmp_seq[dna_length];
     gzread(backup_file, tmp_seq, dna_length * sizeof(tmp_seq[0]));
 
-    seq_ = boost::dynamic_bitset<>(dna_length);
+    seq_ = bitset(dna_length);
     for (size_t i = 0; i < dna_length; ++i) {
 		seq_[i] = tmp_seq - '0';
     }
@@ -57,7 +57,7 @@ void Dna::set(int pos, char c) {
 void Dna::remove(int pos_1, int pos_2) {
     assert(pos_1 >= 0 && pos_2 >= pos_1 && pos_2 <= seq_.size());
 
-	auto seq_copy = boost::dynamic_bitset<>(seq_);
+	auto seq_copy = bitset(seq_);
 
 	if (pos_2 < seq_.size()) {
 		seq_.reset(pos_1, seq_.size() - pos_1);
@@ -77,17 +77,17 @@ void Dna::remove(int pos_1, int pos_2) {
  * @param seq : the sequence itself
  * @param seq_length : the size of the sequence
  */
-void Dna::insert(int pos, boost::dynamic_bitset<> &seq) {
+void Dna::insert(int pos, bitset &seq) {
 // Insert sequence 'seq' at position 'pos'
     assert(pos >= 0 && pos < seq_.size());
 
     seq_.resize(seq_.size() + seq.size(), false);
 
-	auto post_bitmask = boost::dynamic_bitset<>(seq_);
+	auto post_bitmask = bitset(seq_);
 	post_bitmask.reset(0, pos);
 	post_bitmask <<= seq.size();
 
-	auto seq_bitmask = boost::dynamic_bitset<>(seq);
+	auto seq_bitmask = bitset(seq);
 	seq_bitmask.resize(seq_.size(), false);
 	seq_bitmask <<= pos;
 
@@ -132,7 +132,7 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                             -----      |
         //                                             pos_2    <-'
         //
-        auto seq_dupl = boost::dynamic_bitset<>(seq_);
+        auto seq_dupl = bitset(seq_);
 
         seq_dupl >>= pos_1;
         seq_dupl.resize(pos_2 - pos_1);
@@ -151,10 +151,10 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
         //                                                  -----
         //
         //
-        auto seq_begin = boost::dynamic_bitset<>(seq_);
+        auto seq_begin = bitset(seq_);
 		seq_begin.resize(pos_2);
 
-        auto seq_end = boost::dynamic_bitset<>(seq_);
+        auto seq_end = bitset(seq_);
         seq_end >>= pos_1;
 		seq_begin.resize(seq_end.size() - pos_1);
 

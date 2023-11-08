@@ -6,6 +6,12 @@
 
 #include <cstdint>
 
+#include <boost/dynamic_bitset.hpp>
+#include <boost/align/aligned_allocator.hpp>
+
+typedef u_int64_t block;
+typedef boost::dynamic_bitset<block, boost::alignment::aligned_allocator<block, 16>> bitset;
+
 constexpr int8_t NB_BASE = 2;
 constexpr int8_t CODON_SIZE = 3;
 // promoter
@@ -54,9 +60,8 @@ constexpr int8_t NEIGHBORHOOD_WIDTH  = 3;
 constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
 constexpr int8_t NEIGHBORHOOD_SIZE   = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
 
-const u_int64_t prom_seq = 0b0110100100111001101010;
-const u_int64_t shine_dal_seq = 0b0000000110110;
-const u_int64_t shine_dal_begin = 0b110110;
-const u_int64_t shine_dal_end = 0b000;
-const u_int64_t protein_end = 0b100;
-
+const block prom_seq = 0b0110100100111001101010;
+const block shine_dal_seq = 0b0000000110110;
+const block shine_dal_begin = 0b110110;
+const block shine_dal_end = 0b000;
+const block protein_end = 0b100;
