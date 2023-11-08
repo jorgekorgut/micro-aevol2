@@ -10,15 +10,12 @@
 #include "Threefry.h"
 #include "aevol_constants.h"
 
-#include "bitset/bitset.h"
-
-class Dna
-{
+class Dna {
 
 public:
     Dna() = default;
 
-    Dna(const Dna &clone);
+    Dna(const Dna &clone) = default;
 
     Dna(int length, Threefry::Gen &&rng);
 
@@ -36,7 +33,7 @@ public:
     void remove(int pos_1, int pos_2);
 
     /// Insert a sequence of a given length at a given position into the DNA of the Organism
-    void insert(int pos, Bitset &seq);
+    void insert(int pos, bitset &seq);
 
     /// Insert a sequence of a given length at a given position into the DNA of the Organism
     void insert(int pos, Dna *seq);
@@ -55,5 +52,5 @@ public:
 
     int codon_at(int pos);
 
-    Bitset seq_;
+    bitset seq_;
 };

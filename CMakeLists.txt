@@ -3,9 +3,7 @@ project(pdc_mini_aevol)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++)
-#SET(GCC_COVERAGE_COMPILE_FLAGS "-static-libstdc++ -static-libgcc -lgomp -static ")
-#SET(GCC_COVERAGE_LINK_FLAGS    "-static-libstdc++ -static-libgcc -lgomp -static ")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
 set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
@@ -39,6 +37,10 @@ endif ( USE_OMP )
 
 find_package(ZLIB REQUIRED)
 
+set(BOOST_ROOT /home/jlprein/docs/boost_1_83_0)
+find_package(Boost 1.83.0 REQUIRED)
+include_directories("${Boost_INCLUDE_DIRS}")
+
 add_library(micro_aevol
         Abstract_ExpManager.cpp
         ExpManager.cpp
@@ -48,8 +50,7 @@ add_library(micro_aevol
         Organism.cpp
         Stats.cpp
         Threefry.cpp
-        Dna.cpp
-        bitset/bitset.cpp)
+        Dna.cpp)
 
 target_link_libraries(micro_aevol PUBLIC ZLIB::ZLIB)
 
