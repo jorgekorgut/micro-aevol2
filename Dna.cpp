@@ -164,68 +164,59 @@ void Dna::do_duplication(int pos_1, int pos_2, int pos_3) {
 }
 
 int Dna::promoter_at(int pos) {
-    //std::cout << "promoter_at:" << pos << std::endl;
+    auto val = seq_.get_subset(pos, PROM_SIZE);
+    auto comparation = val ^ prom_seq;
+    int dist_lead = std::popcount(comparation);
 
-	int dist_lead = 0;
-    for (int motif_id = 0; motif_id < PROM_SIZE; motif_id++) {
-        int search_pos = pos + motif_id;
-        // Circular search in a array
-        if (search_pos >= seq_.size())
-        {
-            search_pos -= seq_.size();
-        }
-            
-        // Searching for the promoter
-        // TODO: optimize by using an OR operation and count the set bits?
-        dist_lead += (PROM_SEQ[motif_id] - '0') != seq_[search_pos];
-    }
-
-    //std::cout << "distance:" << dist_lead << std::endl;
     return dist_lead;
 }
 
 // Given a, b, c, d boolean variable and X random boolean variable,
 // a terminator look like : a b c d X X !d !c !b !a
 int Dna::terminator_at(int pos) {
-    int term_dist[TERM_STEM_SIZE];
-    for (int motif_id = 0; motif_id < TERM_STEM_SIZE; motif_id++) {
-        int right = pos + motif_id;
-        int left = pos + (TERM_SIZE - 1) - motif_id;
+	auto right = seq_.get_subset(pos, TERM_STEM_SIZE);
+	auto left = seq_.get_subset(pos + TERM_SIZE - TERM_STEM_SIZE, TERM_STEM_SIZE);
 
-        // loop back the dna inf needed
-        if (right >= length()) right -= length();
-        if (left >= length()) left -= length();
+#if 0
+	left = (left & 0xC) >> 2 | (left & 0x3) << 2;
+	left = (left & 0xA) >> 1 | (left & 0x5) << 1;
+	return std::popcount(left ^ right);
 
-        // Search for the terminators
-        term_dist[motif_id] = seq_[right] != seq_[left] ? 1 : 0;
-    }
-    int dist_term_lead = term_dist[0] +
-                         term_dist[1] +
-                         term_dist[2] +
-                         term_dist[3];
+#elif 0
+	static unsigned char lookup[16] = {
+		0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+		0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf,
+	};
+
+	left = lookup[left];
+	return std::popcount(left ^ right);
+#else
+
+	int dist_term_lead = 0;
+	dist_term_lead += (left & 0b0001) != ((right & 0b1000) >> 3);
+	dist_term_lead += (left & 0b0010) != ((right & 0b0100) >> 1);
+	dist_term_lead += (left & 0b0100) != ((right & 0b0010) << 1);
+	dist_term_lead += (left & 0b1000) != ((right & 0b0001) << 3);
 
     return dist_term_lead;
+#endif
 }
 
 bool Dna::shine_dal_start(int pos) {
-    bool start = false;
-    int t_pos, k_t;
+#if 1
+	auto start = seq_.get_subset(pos, SHINE_DAL_SIZE);
+	if (start != shine_dal_begin)
+		return false;
+	auto end = seq_.get_subset(pos + SHINE_DAL_SIZE + SD_START_SPACER, CODON_SIZE);
+	if (end != shine_dal_end)
+		return false;
 
-    for (int k = 0; k < SHINE_DAL_SIZE + CODON_SIZE; k++) {
-        k_t = k >= SHINE_DAL_SIZE ? k + SD_START_SPACER : k;
-        t_pos = pos + k_t;
-        if (t_pos >= seq_.size())
-            t_pos -= seq_.size();
-
-        if (seq_[t_pos] == (SHINE_DAL_SEQ[k_t] - '0')) {
-            start = true;
-        } else {
-            start = false;
-            break;
-        }
-    }
-
-    return start;
+	return true;
+#else
+	auto val = seq_.get_subset(pos, SD_TO_START);
+	val &= ~seq_.bit_mask(SHINE_DAL_SIZE, SHINE_DAL_SIZE + SD_START_SPACER - 1);
+	return val == shine_dal_seq;
+#endif
 }
 
 bool Dna::protein_stop(int pos) {

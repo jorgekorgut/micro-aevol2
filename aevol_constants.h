@@ -53,3 +53,8 @@ constexpr int SELECTION_PRESSURE = 1000;
 constexpr int8_t NEIGHBORHOOD_WIDTH  = 3;
 constexpr int8_t NEIGHBORHOOD_HEIGHT = 3;
 constexpr int8_t NEIGHBORHOOD_SIZE   = NEIGHBORHOOD_HEIGHT * NEIGHBORHOOD_WIDTH;
+
+const u_int64_t prom_seq = 0b0110100100111001101010;
+const u_int64_t shine_dal_seq = 0b0000000110110;
+const u_int64_t shine_dal_begin = 0b110110;
+const u_int64_t shine_dal_end = 0b000;
