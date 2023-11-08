@@ -28,12 +28,12 @@ constexpr int32_t DO_TRANSLATION_LOOP = SHINE_DAL_SIZE + SD_START_SPACER + 3 * C
 
 // Codon
 constexpr int8_t CODON_START = 0b000;
-constexpr int8_t CODON_STOP  = 0b001;
-constexpr int8_t CODON_M0    = 0b100;
+constexpr int8_t CODON_STOP  = 0b100;
+constexpr int8_t CODON_M0    = 0b001;
 constexpr int8_t CODON_M1    = 0b101;
 constexpr int8_t CODON_W0    = 0b010;
-constexpr int8_t CODON_W1    = 0b011;
-constexpr int8_t CODON_H0    = 0b110;
+constexpr int8_t CODON_W1    = 0b110;
+constexpr int8_t CODON_H0    = 0b011;
 constexpr int8_t CODON_H1    = 0b111;
 
 // Protein / Fuzzy space
@@ -58,3 +58,5 @@ const u_int64_t prom_seq = 0b0110100100111001101010;
 const u_int64_t shine_dal_seq = 0b0000000110110;
 const u_int64_t shine_dal_begin = 0b110110;
 const u_int64_t shine_dal_end = 0b000;
+const u_int64_t protein_end = 0b100;
+

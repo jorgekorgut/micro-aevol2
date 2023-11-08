@@ -220,37 +220,10 @@ bool Dna::shine_dal_start(int pos) {
 }
 
 bool Dna::protein_stop(int pos) {
-    bool is_protein;
-    int t_k;
-
-    for (int k = 0; k < CODON_SIZE; k++) {
-        t_k = pos + k;
-        if (t_k >= seq_.size())
-            t_k -= seq_.size();
-
-        if (seq_[t_k] == PROTEIN_END[k] - '0') {
-            is_protein = true;
-        } else {
-            is_protein = false;
-            break;
-        }
-    }
-
-    return is_protein;
+	auto val = seq_.get_subset(pos, CODON_SIZE);
+	return val == protein_end;
 }
 
 int Dna::codon_at(int pos) {
-    int value = 0;
-
-    int t_pos;
-
-    for (int i = 0; i < CODON_SIZE; i++) {
-        t_pos = pos + i;
-        if (t_pos >= seq_.size())
-            t_pos -= seq_.size();
-        if (seq_[t_pos])
-            value += 1 << (CODON_SIZE - i - 1);
-    }
-
-    return value;
+    return seq_.get_subset(pos, CODON_SIZE);
 }
