@@ -47,8 +47,10 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
 
     genome_length_ = cpu_exp->internal_organisms_[0]->length();
     host_individuals_ = new block *[nb_indivs_];
+    // TODO benchmark against +1
+    uint block_len = genome_length_ / 64 + !!(genome_length_ % 64);
     for (int i = 0; i < nb_indivs_; ++i) {
-        host_individuals_[i] = new block[genome_length_/ 64 + 1];
+        host_individuals_[i] = new block[block_len];
         const auto& org = cpu_exp->internal_organisms_[i];
         memcpy(host_individuals_[i], org->dna_->seq_.get_blocks().data(),
                sizeof(block) * org->dna_->seq_.num_blocks());
