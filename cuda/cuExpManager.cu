@@ -50,7 +50,8 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     for (int i = 0; i < nb_indivs_; ++i) {
         host_individuals_[i] = new block[genome_length_/ 64 + 1];
         const auto& org = cpu_exp->internal_organisms_[i];
-        memcpy(host_individuals_[i], org->dna_->seq_.get_blocks().data(), genome_length_ * sizeof(char));
+        memcpy(host_individuals_[i], org->dna_->seq_.get_blocks().data(),
+               sizeof(block) * org->dna_->seq_.num_blocks());
     }
 
     target_ = new double[FUZZY_SAMPLING];
@@ -210,6 +211,7 @@ void cuExpManager::save(int t) const {
     transfer_to_host();
 
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
+        // TODO
         gzwrite(exp_backup_file, &genome_length_, sizeof(genome_length_));
         gzwrite(exp_backup_file, host_individuals_[indiv_id], genome_length_ * sizeof(char));
     }
@@ -247,6 +249,7 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(cuRNA)));
 
     // Transfer data from individual to device
+    // TODO
     for (int i = 0; i < nb_indivs_; ++i) {
         auto offset = genome_length_ + PROM_SIZE;
         auto indiv_genome_pointer = all_child_genome_ + (i * offset);
