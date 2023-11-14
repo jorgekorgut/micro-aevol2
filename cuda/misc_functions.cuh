@@ -52,11 +52,11 @@ __device__ T clamp(T x, T a, T b)
 
 /// Specific to Aevol model
 
-__device__ uint8_t is_promoter(const block* sequence);
+__device__ uint8_t is_promoter(block sequence);
 
-__device__ bool is_terminator(const block* sequence);
+__device__ bool is_terminator(block sequence);
 
-__device__ bool is_prot_start(const block* sequence);
+__device__ bool is_prot_start(block sequence);
 
 __device__ uint8_t translate_to_codon(const block* seq);
 

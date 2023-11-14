@@ -39,7 +39,7 @@ private:
     int nb_indivs_;
 
     int genome_length_;
-    char **host_individuals_;
+    block **host_individuals_;
 
     key_value_type seed_;
     size_t nb_counter_;

@@ -9,13 +9,73 @@
 #include <cstdio>
 #include <cassert>
 
+#define blockSizeBites (sizeof(block) * 8)
+
+__device__ inline int fast_mod(const int input, const int ceil)
+{
+    // apply the modulo operator only when needed
+    // (i.e. when the input is greater than the ceiling)
+    return input >= ceil ? input % ceil : input;
+    // NB: the assumption here is that the numbers are positive
+}
+
+__device__ const block get_block(block* genome, uint size, uint bit_index, uint length) {
+
+  if(bit_index >= size){
+      bit_index -= size;
+  }
+
+  block value = 0;
+  int blockIndex = bit_index / blockSizeBites;
+  int bitIndex = fast_mod(bit_index, blockSizeBites);
+
+  // If the mask is truncated by blocks or end of bitset
+  if (bitIndex + length >= blockSizeBites || bit_index + length >= size)
+  {
+      int nextBlockIndex = blockIndex + 1;
+      // uint blockCount = std::ceil(size / blockSizeBites);
+      uint blockCount = size / blockSizeBites + !!(size % 64);
+
+      if (nextBlockIndex > blockCount - 1)
+      {
+          nextBlockIndex = 0;
+      }
+
+      block leftMask = 1;
+      leftMask <<= length;
+      leftMask -= 1;
+
+      value = genome[blockIndex] >> bitIndex | genome[nextBlockIndex] << (blockSizeBites - bitIndex);
+
+      if (bit_index + length >= size)
+      {
+          int lastBlockRealSize = fast_mod(size, blockSizeBites);
+          value |= genome[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
+      }
+
+      value = value & leftMask;
+  }
+  else
+  {
+      block rightMask = 1;
+      rightMask <<= bitIndex + length;
+      rightMask -= 1;
+
+      value = (genome[blockIndex] & rightMask) >> bitIndex;
+  }
+
+  return value;
+}
+
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
-    uint idx = threadIdx.x;
+    uint tid = threadIdx.x;
+    uint bid = blockIdx.x;
     uint rr_width = blockDim.x;
+    uint idx = tid + bid * rr_width;
 
-    for (uint position = idx; position < size; position += rr_width) {
-        const block *genome_at_pos = genome + position;
+    for (uint position = idx; position < size; position += rr_width * gridDim.x) {
+        block genome_at_pos = get_block(genome, size, position, PROM_SIZE);
 
         promoters[position]   = is_promoter(genome_at_pos);
         terminators[position] = is_terminator(genome_at_pos);

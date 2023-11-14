@@ -46,11 +46,11 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     nb_indivs_ = grid_height_ * grid_width_;
 
     genome_length_ = cpu_exp->internal_organisms_[0]->length();
-    host_individuals_ = new char *[nb_indivs_];
+    host_individuals_ = new block *[nb_indivs_];
     for (int i = 0; i < nb_indivs_; ++i) {
-        host_individuals_[i] = new char[genome_length_];
+        host_individuals_[i] = new block[genome_length_/ 64 + 1];
         const auto& org = cpu_exp->internal_organisms_[i];
-        memcpy(host_individuals_[i], org->dna_->seq_.data(), genome_length_ * sizeof(char));
+        memcpy(host_individuals_[i], org->dna_->seq_.get_blocks().data(), genome_length_ * sizeof(char));
     }
 
     target_ = new double[FUZZY_SAMPLING];
