@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
 set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
-set(USE_CUDA OFF CACHE BOOL "Whether to enable CUDA parallelization")
+set(USE_CUDA ON CACHE BOOL "Whether to enable CUDA parallelization")
 
 if ( DO_TRACES )
     add_definitions(-DTRACES)
@@ -37,9 +37,9 @@ endif ( USE_OMP )
 
 find_package(ZLIB REQUIRED)
 
-set(BOOST_ROOT /home/jlprein/docs/boost_1_83_0)
+set(BOOST_ROOT ./boost/boost_1_83_0)
 find_package(Boost 1.83.0 REQUIRED)
-include_directories("${Boost_INCLUDE_DIRS}")
+include_directories(./boost/boost_1_83_0/boost)
 
 add_library(micro_aevol
         Abstract_ExpManager.cpp

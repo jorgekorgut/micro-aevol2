@@ -19,8 +19,8 @@ struct cuGene {
 };
 
 struct cuRNA {
-    uint8_t errors{};
-    uint start_transcription{};
+    block errors{};
+    block start_transcription{};
     uint transcription_length{};
 
     uint nb_gene{};
@@ -75,12 +75,12 @@ struct cuIndividual {
     __device__ void print_phenotype() const;
 
     uint size{};
-    char *genome{};
-    uint8_t *promoters{};
+    block *genome{};
+    block *promoters{};
     uint nb_terminator{};
-    uint *terminators{};
+    block *terminators{};
     uint nb_prot_start{};
-    uint *prot_start{};
+    block *prot_start{};
 
     uint nb_rnas{};
     cuRNA *list_rnas{};

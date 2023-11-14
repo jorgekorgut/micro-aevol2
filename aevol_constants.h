@@ -36,14 +36,14 @@ const std::string PROTEIN_END("001");
 constexpr int32_t DO_TRANSLATION_LOOP = SHINE_DAL_SIZE + SD_START_SPACER + 3 * CODON_SIZE;
 
 // Codon
-constexpr int8_t CODON_START = 0b000;
-constexpr int8_t CODON_STOP = 0b100; //0b001
-constexpr int8_t CODON_M0 = 0b001; //0b100; 
-constexpr int8_t CODON_M1 = 0b101;
-constexpr int8_t CODON_W0 = 0b010;
-constexpr int8_t CODON_W1 = 0b110; //0b011;
-constexpr int8_t CODON_H0 = 0b011;//0b110;
-constexpr int8_t CODON_H1 = 0b111;
+constexpr block CODON_START = 0b000;
+constexpr block CODON_STOP = 0b100; //0b001
+constexpr block CODON_M0 = 0b001; //0b100; 
+constexpr block CODON_M1 = 0b101;
+constexpr block CODON_W0 = 0b010;
+constexpr block CODON_W1 = 0b110; //0b011;
+constexpr block CODON_H0 = 0b011;//0b110;
+constexpr block CODON_H1 = 0b111;
 
 // Protein / Fuzzy space
 constexpr double X_MIN = 0.0;

@@ -10,9 +10,10 @@
 
 class cuIndividual;
 
-class cuExpManager : public Abstract_ExpManager {
+class cuExpManager : public Abstract_ExpManager
+{
 public:
-    explicit cuExpManager(const ExpManager* cpu_exp);
+    explicit cuExpManager(const ExpManager *cpu_exp);
 
     ~cuExpManager() override;
 
@@ -21,6 +22,9 @@ public:
     void save(int t) const final;
 
     void load(int t) final;
+
+    int grid_height_;
+    int grid_width_;
 
 private:
     void run_a_step();
@@ -35,31 +39,26 @@ private:
     int nb_indivs_;
 
     int genome_length_;
-    char** host_individuals_;
+    char **host_individuals_;
 
     key_value_type seed_;
     size_t nb_counter_;
-    ctr_value_type* counters_;
+    ctr_value_type *counters_;
 
-    double* target_;
-
-    int grid_height_;
-    int grid_width_;
+    double *target_;
 
     double mutation_rate_;
 
     int backup_step_;
 
     // Device data
-    cuIndividual* device_individuals_;
-    char* all_child_genome_;
-    char* all_parent_genome_;
+    cuIndividual *device_individuals_;
+    block *all_child_genome_;
+    block *all_parent_genome_;
 
-    int* reproducers_;
+    int *reproducers_;
 
-    double* device_target_;
+    double *device_target_;
 
-    RandService* rand_service_;
+    RandService *rand_service_;
 };
-
-

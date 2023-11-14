@@ -234,16 +234,16 @@ void cuExpManager::transfer_to_device() {
     // For each genome, we add a phantom space at the end.
     auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
 
-    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(char)));
-    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(char)));
+    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(block)));
+    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(block)));
 
-    uint8_t* all_promoters;
-    uint* all_terminators;
-    uint* all_prot_start;
+    block* all_promoters;
+    block* all_terminators;
+    block* all_prot_start;
     cuRNA* all_rnas;
-    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(uint8_t)));
-    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(uint)));
-    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(uint)));
+    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(block)));
+    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(block)));
+    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(block)));
     checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(cuRNA)));
 
     // Transfer data from individual to device
@@ -355,7 +355,7 @@ void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate
 }
 
 __global__
-void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproducers, const char* all_parent_genome) {
+void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproducers, const block* all_parent_genome) {
     // One block per individuals
     auto indiv_idx = blockIdx.x;
     auto idx = threadIdx.x;
@@ -365,8 +365,8 @@ void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproduc
         return;
     }
 
-    __shared__ const char* parent_genome;
-    __shared__ char* child_genome;
+    __shared__ const block* parent_genome;
+    __shared__ block* child_genome;
     __shared__ uint size;
 
     if (threadIdx.x == 0) {
@@ -428,7 +428,7 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
 }
 
 __global__
-void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, char* all_parent_genome) {
+void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, block* all_parent_genome) {
     // One thread per individual
     auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
     if (indiv_idx >= nb_indivs)
@@ -549,8 +549,8 @@ void check_rng(RandService* rand_service) {
 }
 
 __global__
-void init_device_population(int nb_indivs, int genome_length, cuIndividual* all_individuals, char* all_genomes,
-                            uint8_t* all_promoters, uint* all_terminators, uint* all_prot_start, cuRNA* all_rnas) {
+void init_device_population(int nb_indivs, int genome_length, cuIndividual* all_individuals, block* all_genomes,
+                            block* all_promoters, block* all_terminators, block* all_prot_start, cuRNA* all_rnas) {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
     auto rr_width = blockDim.x * gridDim.x;
 

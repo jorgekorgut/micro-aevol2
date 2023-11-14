@@ -6,6 +6,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include "../aevol_constants.h"
 
 /// General Purpose
 template <typename T>
@@ -51,13 +52,13 @@ __device__ T clamp(T x, T a, T b)
 
 /// Specific to Aevol model
 
-__device__ uint8_t is_promoter(const char* sequence);
+__device__ uint8_t is_promoter(const block* sequence);
 
-__device__ bool is_terminator(const char* sequence);
+__device__ bool is_terminator(const block* sequence);
 
-__device__ bool is_prot_start(const char* sequence);
+__device__ bool is_prot_start(const block* sequence);
 
-__device__ uint8_t translate_to_codon(const char* seq);
+__device__ uint8_t translate_to_codon(const block* seq);
 
 inline __device__ uint get_distance(uint a, uint b, uint size){
   if (a > b)

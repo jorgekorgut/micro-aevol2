@@ -4,6 +4,7 @@
 
 #include "cuIndividual.cuh"
 #include "misc_functions.cuh"
+#include "../aevol_constants.h"
 
 #include <cstdio>
 #include <cassert>
@@ -14,7 +15,7 @@ __device__ void cuIndividual::search_patterns() {
     uint rr_width = blockDim.x;
 
     for (uint position = idx; position < size; position += rr_width) {
-        const char *genome_at_pos = genome + position;
+        const block *genome_at_pos = genome + position;
 
         promoters[position]   = is_promoter(genome_at_pos);
         terminators[position] = is_terminator(genome_at_pos);
@@ -93,7 +94,7 @@ __device__ void cuIndividual::prepare_rnas() {
     int insert_position = 0;
 
     for (uint read_position = 0; read_position < size; ++read_position) {
-        uint8_t read_value = promoters[read_position];
+        block read_value = promoters[read_position];
         if (read_value <= PROM_MAX_DIFF) {
             auto &rna = list_rnas[insert_position];
             rna.errors = read_value;
@@ -110,7 +111,7 @@ __device__ void cuIndividual::prepare_rnas() {
 __device__ void cuIndividual::compute_rna(uint rna_idx) const {
     // One thread
     auto &rna = list_rnas[rna_idx];
-    uint start_transcript = rna.start_transcription;
+    block start_transcript = rna.start_transcription;
 
     // get end of transcription
     // find the smallest element greater than start
@@ -136,7 +137,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     if (not nb_ps) {
         return;
     }
-    uint *list_ps = prot_start;
+    block *list_ps = prot_start;
     uint local_nb_gene = 0;
 
     // Correctly setup the research
@@ -218,7 +219,7 @@ __device__ void cuIndividual::translate_gene(uint gene_idx) const {
     auto &new_protein = list_protein[gene_idx];
 
     while (true) {
-        uint8_t codon = translate_to_codon(genome + it);
+        block codon = translate_to_codon(genome + it);
         if (codon == CODON_STOP)
             break;
         distance += CODON_SIZE;
