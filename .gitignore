@@ -4,3 +4,6 @@
 
 experiments/
 .vscode/
+boost/
+backup/
+stats/
