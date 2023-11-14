@@ -39,7 +39,7 @@ find_package(ZLIB REQUIRED)
 
 set(BOOST_ROOT ./boost/boost_1_83_0)
 find_package(Boost 1.83.0 REQUIRED)
-include_directories(./boost/boost_1_83_0/boost)
+include_directories("${Boost_INCLUDE_DIRS}")
 
 add_library(micro_aevol
         Abstract_ExpManager.cpp
