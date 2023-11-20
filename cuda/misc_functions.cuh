@@ -9,6 +9,9 @@
 #include "../aevol_constants.h"
 
 /// General Purpose
+
+// Copy all elements evaluating to true into the first indices of the
+// collection while keeping their order. Return their number.
 template <typename T>
 __device__ int sparse(int size, T* sparse_collection){
   int insert_position = 0;

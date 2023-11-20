@@ -13,13 +13,14 @@
 
 __device__ inline int fast_mod(const int input, const int ceil)
 {
+	// TODO: Use (& (ceil - 1)) for powers of 2
     // apply the modulo operator only when needed
     // (i.e. when the input is greater than the ceiling)
     return input >= ceil ? input % ceil : input;
     // NB: the assumption here is that the numbers are positive
 }
 
-__device__ const block get_block(block* genome, uint size, uint bit_index, uint length) {
+__device__ const block get_block_circ(block* genome, uint size, uint bit_index, uint length) {
 
   if(bit_index >= size){
       bit_index -= size;
@@ -34,7 +35,8 @@ __device__ const block get_block(block* genome, uint size, uint bit_index, uint 
   {
       int nextBlockIndex = blockIndex + 1;
       // uint blockCount = std::ceil(size / blockSizeBites);
-      uint blockCount = size / blockSizeBites + !!(size % 64);
+      // uint blockCount = size / blockSizeBites + !!(fast_mod(size, blockSizeBites));
+      uint blockCount = size / blockSizeBites + !!(size & (blockSizeBites - 1));
 
       if (nextBlockIndex > blockCount - 1)
       {
@@ -67,6 +69,25 @@ __device__ const block get_block(block* genome, uint size, uint bit_index, uint 
   return value;
 }
 
+// No safety checks.
+__device__
+const block
+get_block(block* genome, uint pos, uint len)
+{
+	// pos >> 6
+	uint start_block = pos / blockSizeBites;
+	uint pos_idx = pos & (blockSizeBites - 1);
+
+	block value = (genome[start_block] >> pos_idx) & ((1 << len) - 1);
+
+	if (pos_idx + len > blockSizeBites) {
+		size_type start_nbits = blockSizeBites - pos_idx;
+		value |= (m_bits[end_block] << start_nbits) & ((1 << len) - 1);
+	}
+
+	return value;
+}
+
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
     uint tid = threadIdx.x;
@@ -74,8 +95,10 @@ __device__ void cuIndividual::search_patterns() {
     uint rr_width = blockDim.x;
     uint idx = tid + bid * rr_width;
 
-    for (uint position = idx; position < size; position += rr_width * gridDim.x) {
-        block genome_at_pos = get_block(genome, size, position, PROM_SIZE);
+    for (uint position = idx; position < block_size; position += rr_width * gridDim.x) {
+        // NOTE: We don't need the circular version because of the "phantom
+        // space" (see cuExpManager.cu)
+        block genome_at_pos = get_block(genome, position, PROM_SIZE);
 
         promoters[position]   = is_promoter(genome_at_pos);
         terminators[position] = is_terminator(genome_at_pos);
