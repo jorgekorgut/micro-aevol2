@@ -255,22 +255,22 @@ void cuExpManager::load(int t) {
 
 void cuExpManager::transfer_to_device() {
     // Allocate memory for individuals in device world
-    checkCuda(cudaMalloc(&(device_individuals_), nb_indivs_ * sizeof(cuIndividual)));
+    checkCuda(cudaMalloc(&(device_individuals_), nb_indivs_ * sizeof(*device_individuals_)));
     auto all_genomes_size = nb_indivs_ * block_length_;
     // For each genome, we add a phantom space at the end.
     auto all_genomes_size_w_phantom = nb_indivs_ * block_length_phantom_;
 
-    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(block)));
-    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(block)));
+    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(*all_child_genome_)));
+    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(*all_parent_genome_)));
 
     block* all_promoters;
     block* all_terminators;
     block* all_prot_start;
     cuRNA* all_rnas;
-    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(block)));
-    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(block)));
-    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(block)));
-    checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(cuRNA)));
+    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(*all_promoters)));
+    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(*all_terminators)));
+    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(*all_prot_start)));
+    checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(*all_rnas)));
 
     // Transfer data from individual to device
     // TODO
@@ -287,22 +287,22 @@ void cuExpManager::transfer_to_device() {
     CHECK_KERNEL
 
     // Transfer phenotypic target
-    checkCuda(cudaMalloc(&(device_target_), FUZZY_SAMPLING * sizeof(double)));
-    checkCuda(cudaMemcpy(device_target_, target_, FUZZY_SAMPLING * sizeof(double), cudaMemcpyHostToDevice));
+    checkCuda(cudaMalloc(&(device_target_), FUZZY_SAMPLING * sizeof(*device_target_)));
+    checkCuda(cudaMemcpy(device_target_, target_, FUZZY_SAMPLING * sizeof(*device_target_), cudaMemcpyHostToDevice));
 
     // Allocate memory for reproduction data
-    checkCuda(cudaMalloc(&(reproducers_), nb_indivs_ * sizeof(int)));
+    checkCuda(cudaMalloc(&(reproducers_), nb_indivs_ * sizeof(*reproducers_)));
 
     // Initiate Random Number generator
     RandService tmp;
-    checkCuda(cudaMalloc(&(tmp.rng_counters), nb_counter_ * sizeof(ctr_value_type)));
-    checkCuda(cudaMemcpy(tmp.rng_counters, counters_, nb_counter_ * sizeof(ctr_value_type), cudaMemcpyHostToDevice));
+    checkCuda(cudaMalloc(&(tmp.rng_counters), nb_counter_ * sizeof(*tmp.rng_counters)));
+    checkCuda(cudaMemcpy(tmp.rng_counters, counters_, nb_counter_ * sizeof(*tmp.rng_counters), cudaMemcpyHostToDevice));
     tmp.seed = {{0, seed_}};
     tmp.phase_size = nb_indivs_;
     assert(nb_counter_ == tmp.phase_size * NPHASES);
 
-    checkCuda(cudaMalloc(&(rand_service_), sizeof(RandService)));
-    checkCuda(cudaMemcpy(rand_service_, &tmp, sizeof(RandService), cudaMemcpyHostToDevice));
+    checkCuda(cudaMalloc(&(rand_service_), sizeof(*rand_service_)));
+    checkCuda(cudaMemcpy(rand_service_, &tmp, sizeof(*rand_service_), cudaMemcpyHostToDevice));
 
 //    check_rng<<<1, 1>>>(rand_service_);
 //    check_target<<<1, 1>>>(device_target_);
