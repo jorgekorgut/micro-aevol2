@@ -273,16 +273,12 @@ void cuExpManager::transfer_to_device() {
     checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(*all_rnas)));
 
     // Transfer data from individual to device
-    // TODO
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto offset = block_length_ + 1;
-        auto indiv_genome_pointer = all_child_genome_ + (i * offset);
-        auto indiv_genome_phantom_pointer = indiv_genome_pointer + genome_length_;
-        checkCuda(cudaMemcpy(indiv_genome_pointer, host_individuals_[i], genome_length_, cudaMemcpyHostToDevice));
-        checkCuda(cudaMemcpy(indiv_genome_phantom_pointer, host_individuals_[i], PROM_SIZE, cudaMemcpyHostToDevice));
+        auto indiv_genome = all_child_genome_ + (i * block_length_phantom_);
+        checkCuda(cudaMemcpy(indiv_genome, host_individuals_[i], block_length_phantom_, cudaMemcpyHostToDevice));
     }
 
-    init_device_population<<<1, 1>>>(nb_indivs_, genome_length_, device_individuals_, all_child_genome_,
+    init_device_population<<<1, 1>>>(nb_indivs_, block_length_, block_length_ != block_length_phantom_, genome_length_, device_individuals_, all_child_genome_,
                                      all_promoters, all_terminators, all_prot_start, all_rnas);
     CHECK_KERNEL
 
@@ -311,9 +307,8 @@ void cuExpManager::transfer_to_device() {
 
 void cuExpManager::transfer_to_host() const {
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto offset = genome_length_ + PROM_SIZE;
-        auto indiv_genome_pointer = all_parent_genome_ + (i * offset);
-        checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome_pointer, genome_length_, cudaMemcpyDeviceToHost));
+        auto indiv_genome = all_child_genome_ + (i * block_length_phantom_);
+        checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome, block_length_phantom_, cudaMemcpyDeviceToHost));
     }
 
     RandService tmp;
@@ -576,16 +571,23 @@ void check_rng(RandService* rand_service) {
 }
 
 __global__
-void init_device_population(int nb_indivs, int genome_length, cuIndividual* all_individuals, block* all_genomes,
-                            block* all_promoters, block* all_terminators, block* all_prot_start, cuRNA* all_rnas) {
+void
+init_device_population(int nb_indivs, uint block_length, bool extra_block,
+                       int genome_length, cuIndividual* all_individuals,
+                       block* all_genomes, block* all_promoters,
+                       block* all_terminators, block* all_prot_start,
+                       cuRNA* all_rnas)
+{
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
     auto rr_width = blockDim.x * gridDim.x;
 
     for (int i = idx; i < nb_indivs; i += rr_width) {
         auto& local_indiv = all_individuals[i];
         local_indiv.size = genome_length;
-        auto offset = genome_length * i;
-        local_indiv.genome = all_genomes + offset + i * PROM_SIZE;
+        local_indiv.block_size = block_length;
+
+        auto offset = block_length * i;
+        local_indiv.genome = all_genomes + offset + i * extra_block;
         local_indiv.promoters = all_promoters + offset;
         local_indiv.terminators = all_terminators + offset;
         local_indiv.prot_start = all_prot_start + offset;

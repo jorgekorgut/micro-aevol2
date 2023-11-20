@@ -75,6 +75,7 @@ struct cuIndividual {
     __device__ void print_phenotype() const;
 
     uint size{};
+    uint block_size{};
     block *genome{};
     block *promoters{};
     uint nb_terminator{};
