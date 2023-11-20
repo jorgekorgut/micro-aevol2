@@ -48,14 +48,32 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     genome_length_ = cpu_exp->internal_organisms_[0]->length();
     host_individuals_ = new block *[nb_indivs_];
     // TODO benchmark
-    // uint block_len = genome_length_ / 64 + 1;
-    // uint block_len = genome_length_ / 64 + !!(genome_length_ % 64);
-    uint block_len = (genome_length_ >> 6) + !!(genome_length_ & 63);
+    // block_length_ = genome_length_ / 64 + 1;
+    // block_length_ = genome_length_ / 64 + !!(genome_length_ % 64);
+    // block_length_ = (genome_length_ >> 6) + !!(genome_length_ & 63);
+    block_length_ = ceil(genome_length_ / 64);
+    block_length_phantom_ = ceil((genome_length_ + PROM_SIZE) / 64);
+    assert(block_length_phantom_ - block_length_ <= 1);
     for (int i = 0; i < nb_indivs_; ++i) {
-        host_individuals_[i] = new block[block_len];
+        host_individuals_[i] = new block[block_length_phantom_];
         const auto& org = cpu_exp->internal_organisms_[i];
+        assert(org->dna_->seq_.num_blocks() == block_length_);
         memcpy(host_individuals_[i], org->dna_->seq_.get_blocks().data(),
                sizeof(block) * org->dna_->seq_.num_blocks());
+
+        // set "phantom space"
+        block phantom = host_individuals_[i][0] & ((1 << PROM_SIZE) - 1);
+        block phantom_extra = 0;
+        unsigned extra_bits = org->dna_->seq_.count_extra_bits();
+        if (block_length_ != block_length_phantom_) {
+            phantom_extra = phantom;
+            phantom_extra >>= (org->dna_->seq_.bits_per_block - extra_bits);
+        }
+        phantom <<= extra_bits;
+
+        host_individuals_[i][block_length_ - 1] |= phantom;
+        if (phantom_extra)
+            host_individuals_[i][block_length_] |= phantom_extra;
     }
 
     target_ = new double[FUZZY_SAMPLING];
@@ -73,6 +91,8 @@ cuExpManager::~cuExpManager() {
     device_data_destructor();
     delete[] counters_;
     delete[] target_;
+    for (int i = 0; i < nb_indivs_; ++i)
+        delete[] host_individuals_[i];
     delete[] host_individuals_;
 }
 
@@ -217,7 +237,7 @@ void cuExpManager::save(int t) const {
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
         // TODO
         gzwrite(exp_backup_file, &genome_length_, sizeof(genome_length_));
-        gzwrite(exp_backup_file, host_individuals_[indiv_id], genome_length_ * sizeof(char));
+        gzwrite(exp_backup_file, host_individuals_[indiv_id], block_length_ * sizeof(**host_individuals_));
     }
 
     gzwrite(exp_backup_file, &seed_, sizeof(seed_));
@@ -236,9 +256,9 @@ void cuExpManager::load(int t) {
 void cuExpManager::transfer_to_device() {
     // Allocate memory for individuals in device world
     checkCuda(cudaMalloc(&(device_individuals_), nb_indivs_ * sizeof(cuIndividual)));
-    auto all_genomes_size = nb_indivs_ * genome_length_;
+    auto all_genomes_size = nb_indivs_ * block_length_;
     // For each genome, we add a phantom space at the end.
-    auto all_genomes_size_w_phantom = all_genomes_size + nb_indivs_ * PROM_SIZE;
+    auto all_genomes_size_w_phantom = nb_indivs_ * block_length_phantom_;
 
     checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(block)));
     checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(block)));
@@ -255,7 +275,7 @@ void cuExpManager::transfer_to_device() {
     // Transfer data from individual to device
     // TODO
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto offset = genome_length_ + PROM_SIZE;
+        auto offset = block_length_ + 1;
         auto indiv_genome_pointer = all_child_genome_ + (i * offset);
         auto indiv_genome_phantom_pointer = indiv_genome_pointer + genome_length_;
         checkCuda(cudaMemcpy(indiv_genome_pointer, host_individuals_[i], genome_length_, cudaMemcpyHostToDevice));

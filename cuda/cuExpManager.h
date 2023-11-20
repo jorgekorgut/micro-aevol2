@@ -39,6 +39,8 @@ private:
     int nb_indivs_;
 
     int genome_length_;
+    unsigned block_length_;
+    unsigned block_length_phantom_;
     block **host_individuals_;
 
     key_value_type seed_;
