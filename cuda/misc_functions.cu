@@ -38,6 +38,7 @@ __device__ uint8_t translate_to_codon(const block* seq) {
   uint8_t codon = 0;
 
   for (uint8_t i = 0; i < CODON_SIZE; ++i) {
+    // codon += seq[i] << (CODON_SIZE - 1 - i);
     codon += seq[i] << i;
   }
 

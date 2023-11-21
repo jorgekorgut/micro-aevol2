@@ -77,11 +77,10 @@ struct cuIndividual {
     uint size{};
     uint block_size{};
     block *genome{};
-    block *promoters{};
+    uint8_t *promoters{};
     uint nb_terminator{};
     block *terminators{};
     uint nb_prot_start{};
-    // TODO: what datatype is sensible here?
     block *prot_start{};
 
     uint nb_rnas{};

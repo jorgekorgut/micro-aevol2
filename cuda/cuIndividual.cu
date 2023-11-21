@@ -88,6 +88,19 @@ get_block(block* genome, uint pos, uint len)
 	return value;
 }
 
+__device__
+const void
+set_bit(block* bitset, uint pos, bool value)
+{
+	uint bidx = pos / blockSizeBites;
+	uint idx = pos & (blockSizeBites - 1);
+
+	if (value)
+		bitset[bidx] |= (1 << idx);
+	else
+		bitset[bidx] &= ~(1 << idx);
+}
+
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
     uint tid = threadIdx.x;
@@ -95,14 +108,15 @@ __device__ void cuIndividual::search_patterns() {
     uint rr_width = blockDim.x;
     uint idx = tid + bid * rr_width;
 
-    for (uint position = idx; position < block_size; position += rr_width * gridDim.x) {
+    // TODO: optimize for cache misses
+    for (uint position = idx; position < size; position += rr_width * gridDim.x) {
         // NOTE: We don't need the circular version because of the "phantom
         // space" (see cuExpManager.cu)
         block genome_at_pos = get_block(genome, position, PROM_SIZE);
 
-        promoters[position]   = is_promoter(genome_at_pos);
-        terminators[position] = is_terminator(genome_at_pos);
-        prot_start[position]  = is_prot_start(genome_at_pos);
+        promoters[position] = is_promoter(genome_at_pos);
+        set_bit(terminators, position, is_terminator(genome_at_pos));
+        set_bit(prot_start, position, is_prot_start(genome_at_pos));
     }
 }
 
@@ -115,7 +129,8 @@ __device__ void cuIndividual::sparse_meta() {
         prepare_rnas();
     }
     if (idx == 1) {
-        nb_terminator = sparse(size, terminators);
+        // TODO: do this in search_patterns already
+        nb_terminator = sparse_bitset(size, terminators);
     }
     if (idx == 2) {
         nb_prot_start = sparse(size, prot_start);
@@ -177,7 +192,7 @@ __device__ void cuIndividual::prepare_rnas() {
     int insert_position = 0;
 
     for (uint read_position = 0; read_position < size; ++read_position) {
-        block read_value = promoters[read_position];
+        u_int8_t read_value = promoters[read_position];
         if (read_value <= PROM_MAX_DIFF) {
             auto &rna = list_rnas[insert_position];
             rna.errors = read_value;

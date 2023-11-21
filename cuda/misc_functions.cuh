@@ -29,6 +29,28 @@ __device__ int sparse(int size, T* sparse_collection){
   return insert_position;
 }
 
+__device__ int sparse_bitset(uint size, block* set){
+  uint num = 0
+  uint i;
+  uint mod;
+
+  // TODO: do not hardcode 64
+  for (i = 0; i < size / 64; ++i)
+    num += __popc(set[i]);
+  if ((mod = size & 63))
+    num += __popc(set[i] & ((1 << mod) - 1));
+
+  for (i = 0; i < num / 64; ++i)
+    set[i] = UINT64_MAX;
+  if ((mod = num & 63))
+    set[i] |= ((1 << mod) - 1);
+
+  if (num < size)
+    set[i] &= ~(1 << mod);
+
+  return num;
+}
+
 template <typename T>
 __device__ uint find_smallest_greater(T value, const T* array, uint size){
   if (value > array[size-1])
@@ -46,6 +68,7 @@ __device__ uint find_smallest_greater(T value, const T* array, uint size){
   return min;
 }
 
+// Limit x by in the range [a,b]
 template<typename T>
 __device__ T clamp(T x, T a, T b)
 {

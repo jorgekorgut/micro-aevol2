@@ -256,21 +256,22 @@ void cuExpManager::load(int t) {
 void cuExpManager::transfer_to_device() {
     // Allocate memory for individuals in device world
     checkCuda(cudaMalloc(&(device_individuals_), nb_indivs_ * sizeof(*device_individuals_)));
-    auto all_genomes_size = nb_indivs_ * block_length_;
+    auto all_block_size = nb_indivs_ * block_length_;
+    auto all_genome_size = nb_indivs_ * genome_length_;
     // For each genome, we add a phantom space at the end.
-    auto all_genomes_size_w_phantom = nb_indivs_ * block_length_phantom_;
+    auto all_block_size_w_phantom = nb_indivs_ * block_length_phantom_;
 
-    checkCuda(cudaMalloc(&(all_child_genome_), all_genomes_size_w_phantom * sizeof(*all_child_genome_)));
-    checkCuda(cudaMalloc(&(all_parent_genome_), all_genomes_size_w_phantom * sizeof(*all_parent_genome_)));
+    checkCuda(cudaMalloc(&(all_child_genome_), all_block_size_w_phantom * sizeof(*all_child_genome_)));
+    checkCuda(cudaMalloc(&(all_parent_genome_), all_block_size_w_phantom * sizeof(*all_parent_genome_)));
 
-    block* all_promoters;
+    uint8_t* all_promoters;
     block* all_terminators;
     block* all_prot_start;
     cuRNA* all_rnas;
-    checkCuda(cudaMalloc(&(all_promoters), all_genomes_size * sizeof(*all_promoters)));
-    checkCuda(cudaMalloc(&(all_terminators), all_genomes_size * sizeof(*all_terminators)));
-    checkCuda(cudaMalloc(&(all_prot_start), all_genomes_size * sizeof(*all_prot_start)));
-    checkCuda(cudaMalloc(&(all_rnas), all_genomes_size * sizeof(*all_rnas)));
+    checkCuda(cudaMalloc(&(all_promoters), all_genome_size * sizeof(*all_promoters)));
+    checkCuda(cudaMalloc(&(all_terminators), all_block_size * sizeof(*all_terminators)));
+    checkCuda(cudaMalloc(&(all_prot_start), all_block_size * sizeof(*all_prot_start)));
+    checkCuda(cudaMalloc(&(all_rnas), all_genome_size * sizeof(*all_rnas)));
 
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
@@ -574,7 +575,7 @@ __global__
 void
 init_device_population(int nb_indivs, uint block_length, bool extra_block,
                        int genome_length, cuIndividual* all_individuals,
-                       block* all_genomes, block* all_promoters,
+                       block* all_genomes, uint8_t* all_promoters,
                        block* all_terminators, block* all_prot_start,
                        cuRNA* all_rnas)
 {
@@ -587,11 +588,12 @@ init_device_population(int nb_indivs, uint block_length, bool extra_block,
         local_indiv.block_size = block_length;
 
         auto offset = block_length * i;
+        auto gen_offset = genome_length * i;
         local_indiv.genome = all_genomes + offset + i * extra_block;
-        local_indiv.promoters = all_promoters + offset;
+        local_indiv.promoters = all_promoters + gen_offset;
         local_indiv.terminators = all_terminators + offset;
         local_indiv.prot_start = all_prot_start + offset;
-        local_indiv.list_rnas = all_rnas + offset;
+        local_indiv.list_rnas = all_rnas + gen_offset;
         local_indiv.nb_terminator = 0;
         local_indiv.nb_prot_start = 0;
         local_indiv.nb_rnas = 0;

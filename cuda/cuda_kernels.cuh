@@ -63,7 +63,7 @@ void clean_population_metadata(uint nb_indivs, cuIndividual* individuals);
 __global__
 void init_device_population(int nb_indivs, uint block_length, bool extra_block,
                             int genome_length, cuIndividual* all_individuals,
-                            block* all_genomes, block* all_promoters,
+                            block* all_genomes, uint8_t* all_promoters,
                             block* all_terminators, block* all_prot_start,
                             cuRNA* all_rnas);
 
