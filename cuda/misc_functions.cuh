@@ -10,7 +10,7 @@
 
 /// General Purpose
 
-// Copy all elements evaluating to true into the first indices of the
+// Copy all indices of elements evaluating to true into the first indices of the
 // collection while keeping their order. Return their number.
 template <typename T>
 __device__ int sparse(int size, T* sparse_collection){
@@ -29,26 +29,40 @@ __device__ int sparse(int size, T* sparse_collection){
   return insert_position;
 }
 
-__device__ int sparse_bitset(uint size, block* set){
+__device__
+uint
+count_bitset(block* set, uint size)
+{
   uint num = 0
   uint i;
-  uint mod;
+  uint mod = size & 63;
 
   // TODO: do not hardcode 64
   for (i = 0; i < size / 64; ++i)
     num += __popc(set[i]);
-  if ((mod = size & 63))
+  if (mod)
     num += __popc(set[i] & ((1 << mod) - 1));
 
-  for (i = 0; i < num / 64; ++i)
-    set[i] = UINT64_MAX;
-  if ((mod = num & 63))
-    set[i] |= ((1 << mod) - 1);
-
-  if (num < size)
-    set[i] &= ~(1 << mod);
-
   return num;
+}
+
+__device__
+uint
+sparse_bitset(block* set, uint size, uint* idcs)
+{
+  uint idx = 0;
+
+  for (uint i = 0; i < size; ++i) {
+    auto val = set[i];
+
+    block bitmask = 1
+    for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
+      if (val & bitmask)
+        idcs[idx++] = i * 64 + j;
+    }
+  }
+
+  return idx;
 }
 
 template <typename T>
@@ -86,6 +100,7 @@ __device__ bool is_prot_start(block sequence);
 
 __device__ uint8_t translate_to_codon(const block* seq);
 
+// circular forward distance
 inline __device__ uint get_distance(uint a, uint b, uint size){
   if (a > b)
     return (b + size) - a;

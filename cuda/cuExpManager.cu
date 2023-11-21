@@ -593,6 +593,8 @@ init_device_population(int nb_indivs, uint block_length, bool extra_block,
         local_indiv.promoters = all_promoters + gen_offset;
         local_indiv.terminators = all_terminators + offset;
         local_indiv.prot_start = all_prot_start + offset;
+        local_indiv.terminator_idxs = nullptr;
+        local_indiv.prot_start_idxs = nullptr;
         local_indiv.list_rnas = all_rnas + gen_offset;
         local_indiv.nb_terminator = 0;
         local_indiv.nb_prot_start = 0;

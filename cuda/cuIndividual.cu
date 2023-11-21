@@ -89,9 +89,10 @@ get_block(block* genome, uint pos, uint len)
 }
 
 __device__
-const void
+const bool
 set_bit(block* bitset, uint pos, bool value)
 {
+	// TODO: use a shift
 	uint bidx = pos / blockSizeBites;
 	uint idx = pos & (blockSizeBites - 1);
 
@@ -99,12 +100,18 @@ set_bit(block* bitset, uint pos, bool value)
 		bitset[bidx] |= (1 << idx);
 	else
 		bitset[bidx] &= ~(1 << idx);
+
+	return value;
 }
 
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
+
+    // TODO: could theoretically be left out since it is done by clean_metadata
+    nb_terminator = 0;
+    nb_prot_start = 0;
 
     // TODO: optimize for cache misses
     for (uint position = idx; position < size; position += rr_width) {
@@ -113,9 +120,17 @@ __device__ void cuIndividual::search_patterns() {
         block genome_at_pos = get_block(genome, position, PROM_SIZE);
 
         promoters[position] = is_promoter(genome_at_pos);
-        set_bit(terminators, position, is_terminator(genome_at_pos));
-        set_bit(prot_start, position, is_prot_start(genome_at_pos));
+        // TODO: are the arrays zero initialized? We could first check if the
+        // value is 1 and only then call set_bit to save operations
+        nb_terminator += set_bit(terminators, position, is_terminator(genome_at_pos));
+        nb_prot_start += set_bit(prot_start, position, is_prot_start(genome_at_pos));
     }
+
+    // TODO: I think we don't need the +1
+    terminator_idxs = new uint[nb_terminator + (nb_terminator < size)]{};
+    prot_start_idxs = new uint[nb_prot_start + (nb_prot_start < size)]{};
+    assert(terminator_idxs != nullptr);
+    assert(prot_start_idxs != nullptr);
 }
 
 
@@ -127,11 +142,15 @@ __device__ void cuIndividual::sparse_meta() {
         prepare_rnas();
     }
     if (idx == 1) {
-        // TODO: do this in search_patterns already
-        nb_terminator = sparse_bitset(size, terminators);
+        assert(nb_terminator == sparse_bitset(terminators, size, terminator_idxs));
+        // TODO: is this needed?
+        if (nb_terminator < size)
+            terminator_idxs[nb_terminator - 1] = 0;
     }
     if (idx == 2) {
-        nb_prot_start = sparse(size, prot_start);
+        assert(nb_prot_start == sparse_bitset(prot_start, size, prot_start_idxs));
+        if (nb_prot_start < size)
+            prot_start_idxs[nb_prot_start - 1] = 0;
     }
 }
 
@@ -183,6 +202,11 @@ __device__ void cuIndividual::clean_metadata() {
     list_gene = nullptr;
     delete[] list_protein;
     list_protein = nullptr;
+
+    delete[] terminator_idxs;
+    terminator_idxs = nullptr;
+    delete[] prot_start_idxs;
+    prot_start_idxs = nullptr;
 }
 
 __device__ void cuIndividual::prepare_rnas() {
@@ -207,12 +231,12 @@ __device__ void cuIndividual::prepare_rnas() {
 __device__ void cuIndividual::compute_rna(uint rna_idx) const {
     // One thread
     auto &rna = list_rnas[rna_idx];
-    block start_transcript = rna.start_transcription;
+    uint start_transcript = rna.start_transcription;
 
     // get end of transcription
     // find the smallest element greater than start
-    uint idx_term = find_smallest_greater(start_transcript, terminators, nb_terminator);
-    uint term_position = terminators[idx_term];
+    uint idx_term = find_smallest_greater(start_transcript, terminator_idxs, nb_terminator);
+    uint term_position = terminator_idxs[idx_term];
     uint transcript_length = get_distance(start_transcript, term_position) + TERM_SIZE;
     rna.transcription_length = transcript_length;
     if (transcript_length < DO_TRANSLATION_LOOP) {
@@ -233,7 +257,7 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
     if (not nb_ps) {
         return;
     }
-    block *list_ps = prot_start;
+    uint *list_ps = prot_start_idxs;
     uint local_nb_gene = 0;
 
     // Correctly setup the research

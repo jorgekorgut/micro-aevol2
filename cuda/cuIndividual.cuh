@@ -19,8 +19,8 @@ struct cuGene {
 };
 
 struct cuRNA {
-    block errors{};
-    block start_transcription{};
+    uint8_t errors{};
+    uint start_transcription{};
     uint transcription_length{};
 
     uint nb_gene{};
@@ -51,6 +51,7 @@ struct cuIndividual {
 
     __device__ void clean_metadata();
 
+    // circular forward distance
     inline __device__ uint get_distance(uint a, uint b) const {
         if (a > b)
             return (b + size) - a;
@@ -78,10 +79,13 @@ struct cuIndividual {
     uint block_size{};
     block *genome{};
     uint8_t *promoters{};
-    uint nb_terminator{};
     block *terminators{};
-    uint nb_prot_start{};
     block *prot_start{};
+
+    uint nb_terminator{};
+    uint nb_prot_start{};
+    uint *terminator_idxs{};
+    uint *prot_start_idxs{};
 
     uint nb_rnas{};
     cuRNA *list_rnas{};
