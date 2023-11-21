@@ -103,13 +103,11 @@ set_bit(block* bitset, uint pos, bool value)
 
 __device__ void cuIndividual::search_patterns() {
     // One block per individual
-    uint tid = threadIdx.x;
-    uint bid = blockIdx.x;
+    uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
-    uint idx = tid + bid * rr_width;
 
     // TODO: optimize for cache misses
-    for (uint position = idx; position < size; position += rr_width * gridDim.x) {
+    for (uint position = idx; position < size; position += rr_width) {
         // NOTE: We don't need the circular version because of the "phantom
         // space" (see cuExpManager.cu)
         block genome_at_pos = get_block(genome, position, PROM_SIZE);
