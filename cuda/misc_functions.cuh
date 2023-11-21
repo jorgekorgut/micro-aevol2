@@ -29,42 +29,6 @@ __device__ int sparse(int size, T* sparse_collection){
   return insert_position;
 }
 
-__device__
-uint
-count_bitset(block* set, uint size)
-{
-  uint num = 0
-  uint i;
-  uint mod = size & 63;
-
-  // TODO: do not hardcode 64
-  for (i = 0; i < size / 64; ++i)
-    num += __popc(set[i]);
-  if (mod)
-    num += __popc(set[i] & ((1 << mod) - 1));
-
-  return num;
-}
-
-__device__
-uint
-sparse_bitset(block* set, uint size, uint* idcs)
-{
-  uint idx = 0;
-
-  for (uint i = 0; i < size; ++i) {
-    auto val = set[i];
-
-    block bitmask = 1
-    for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
-      if (val & bitmask)
-        idcs[idx++] = i * 64 + j;
-    }
-  }
-
-  return idx;
-}
-
 template <typename T>
 __device__ uint find_smallest_greater(T value, const T* array, uint size){
   if (value > array[size-1])
@@ -99,6 +63,9 @@ __device__ bool is_terminator(block sequence);
 __device__ bool is_prot_start(block sequence);
 
 __device__ uint8_t translate_to_codon(const block* seq);
+
+__device__ uint count_bitset(block* set, uint size);
+__device__ uint sparse_bitset(block* set, uint size, uint* idcs);
 
 // circular forward distance
 inline __device__ uint get_distance(uint a, uint b, uint size){

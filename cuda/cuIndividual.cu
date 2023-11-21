@@ -75,14 +75,14 @@ const block
 get_block(block* genome, uint pos, uint len)
 {
 	// pos >> 6
-	uint start_block = pos / blockSizeBites;
+	uint bidx = pos / blockSizeBites;
 	uint pos_idx = pos & (blockSizeBites - 1);
 
-	block value = (genome[start_block] >> pos_idx) & ((1 << len) - 1);
+	block value = (genome[bidx] >> pos_idx) & ((1 << len) - 1);
 
 	if (pos_idx + len > blockSizeBites) {
-		size_type start_nbits = blockSizeBites - pos_idx;
-		value |= (m_bits[end_block] << start_nbits) & ((1 << len) - 1);
+		uint start_nbits = blockSizeBites - pos_idx;
+		value |= (genome[bidx + 1] << start_nbits) & ((1 << len) - 1);
 	}
 
 	return value;
