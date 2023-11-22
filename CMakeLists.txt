@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
 project(pdc_mini_aevol)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 
 set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
 set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
-set(USE_CUDA OFF CACHE BOOL "Whether to enable CUDA parallelization")
+set(USE_CUDA ON CACHE BOOL "Whether to enable CUDA parallelization")
 
 if ( DO_TRACES )
     add_definitions(-DTRACES)
