@@ -35,6 +35,27 @@ checkCuda(cudaGetLastError());
 #define CHECK_KERNEL
 #endif
 
+void
+convert_char_to_bitset(const char* arr, uint size, block* set)
+{
+    // TODO: do not hardcode 64
+    block new_block;
+    uint i, bid;
+
+    for (i = bid = 0; i < (size & ~63); i += 64, ++bid) {
+        new_block = 0;
+        for (uint j = 0; j < 64; ++j)
+            new_block |= (arr[i + j] - '0') << j;
+
+        set[bid] = new_block;
+    }
+
+    new_block = 0;
+    for (uint j = 0; i < size; ++i, ++j)
+        new_block |= (arr[i] - '0') << j;
+    set[bid] = new_block;
+}
+
 cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     grid_height_ = cpu_exp->grid_height_;
     grid_width_ = cpu_exp->grid_height_;
@@ -54,6 +75,7 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     block_length_ = ceil(genome_length_ / 64.);
     block_length_phantom_ = ceil((genome_length_ + PROM_SIZE) / 64.);
     assert(block_length_phantom_ - block_length_ <= 1);
+
     for (int i = 0; i < nb_indivs_; ++i) {
         host_individuals_[i] = new block[block_length_phantom_];
         const auto& org = cpu_exp->internal_organisms_[i];
@@ -175,11 +197,13 @@ void cuExpManager::run_evolution(int nb_gen) {
     auto threads_per_block = 64;
     auto grid_dim_1d = ceil((float) nb_indivs_ / (float) threads_per_block);
     evaluate_population();
-    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
-    CHECK_KERNEL
-    swap(all_parent_genome_, all_child_genome_);
+    // swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
+    // CHECK_KERNEL
+    // swap(all_parent_genome_, all_child_genome_);
     check_result<<<1,1>>>(nb_indivs_, device_individuals_);
+    print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
+    return;
 
     printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
     for (int gen = 0; gen < nb_gen; gen++) {
@@ -349,6 +373,58 @@ void cuExpManager::device_data_destructor() {
 
 // Evolution
 
+inline void
+print_bitset(block* set, uint size)
+{
+    for (; size; --size) {
+        for (uint idx = 64; idx; --idx) {
+            printf("%u", 1 & (set[size - 1] >> (idx - 1)));
+        }
+    }
+    printf("\n");
+}
+
+__global__
+void
+print_indivs(cuIndividual* indivs)
+{
+    for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
+        const auto& indiv = individuals[indiv_idx];
+
+        printf("size: %u\n", indiv.size);
+        printf("block_size: %u\n", indiv.block_size);
+        printf("genom: ");
+        print_bitset(indiv.genome, indiv.block_size);
+
+        uint8_t* promoters;
+        for (uint j = indiv.size; j; --j) {
+                printf("%u ", indiv.promoters[i]);
+        }
+        printf("\n");
+
+        printf("terminators: ");
+        print_bitset(indiv.terminators, indiv.block_size);
+        printf("prot_start: ");
+        print_bitset(indiv.prot_start, indiv.block_size);
+
+        printf("nb_terminator: %u\n", indiv.nb_terminator);
+        printf("nb_prot_start: %u\n", indiv.nb_prot_start);
+        // terminator_idxs
+        // prot_start_idxs
+
+        printf("nb_rnas: %u\n", indiv.nb_rnas);
+        indiv.print_rnas();
+
+        printf("nb_gene: %u\n", indiv.nb_gene);
+        indiv.print_gathered_genes();
+        indiv.print_proteins();
+
+        indiv.print_phenotype();
+        printf("fitness: %1.10e\n", indiv.fitness);
+    }
+    printf("\n");
+}
+
 __global__
 void check_result(uint nb_indivs, cuIndividual* individuals) {
     for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
@@ -453,6 +529,7 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
     next_reproducers[grid_idx] = selected_x * grid_height + selected_y;
 }
 
+// TODO
 __global__
 void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, block* all_parent_genome) {
     // One thread per individual
