@@ -308,7 +308,10 @@ void cuExpManager::transfer_to_device() {
 
 void cuExpManager::transfer_to_host() const {
     for (int i = 0; i < nb_indivs_; ++i) {
-        auto indiv_genome = all_child_genome_ + (i * block_length_phantom_);
+        auto indiv_genome = all_parent_genome_ + (i * block_length_phantom_);
+        // TODO: is it a problem that we copy the "phantom space" too? On master
+        // only genome_length_ is copied. Maybe we need to use block_length_ and
+        // zero out the bits after genome_length_
         checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome, block_length_phantom_, cudaMemcpyDeviceToHost));
     }
 
