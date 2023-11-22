@@ -34,7 +34,7 @@ __device__ const block get_block_circ(block* genome, uint size, uint bit_index, 
   if (bitIndex + length >= blockSizeBites || bit_index + length >= size)
   {
       int nextBlockIndex = blockIndex + 1;
-      // uint blockCount = std::ceil(size / blockSizeBites);
+      // uint blockCount = std::ceil(size / (float)blockSizeBites);
       // uint blockCount = size / blockSizeBites + !!(fast_mod(size, blockSizeBites));
       uint blockCount = size / blockSizeBites + !!(size & (blockSizeBites - 1));
 

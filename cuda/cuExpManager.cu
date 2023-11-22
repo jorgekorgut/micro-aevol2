@@ -51,8 +51,8 @@ cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     // block_length_ = genome_length_ / 64 + 1;
     // block_length_ = genome_length_ / 64 + !!(genome_length_ % 64);
     // block_length_ = (genome_length_ >> 6) + !!(genome_length_ & 63);
-    block_length_ = ceil(genome_length_ / 64);
-    block_length_phantom_ = ceil((genome_length_ + PROM_SIZE) / 64);
+    block_length_ = ceil(genome_length_ / 64.);
+    block_length_phantom_ = ceil((genome_length_ + PROM_SIZE) / 64.);
     assert(block_length_phantom_ - block_length_ <= 1);
     for (int i = 0; i < nb_indivs_; ++i) {
         host_individuals_[i] = new block[block_length_phantom_];
