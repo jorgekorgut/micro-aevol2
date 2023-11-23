@@ -19,7 +19,7 @@ __device__ uint8_t is_promoter(const block sequence) {
 __device__ bool is_terminator(const block sequence) {
   int left, right;
   for (left = 0, right = TERM_SIZE - 1; left < TERM_STEM_SIZE; ++left, --right) {
-    if (sequence & (1 << left) == sequence & (1 << right))
+    if ((sequence >> left) & 1 == (sequence >> right) & 1)
       return false;
   }
   return true;
@@ -34,6 +34,7 @@ __device__ bool is_prot_start(const block sequence) {
   return true;
 }
 
+// TODO
 __device__ uint8_t translate_to_codon(const block* seq) {
   uint8_t codon = 0;
 
