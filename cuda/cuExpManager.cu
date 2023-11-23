@@ -35,6 +35,53 @@ checkCuda(cudaGetLastError());
 #define CHECK_KERNEL
 #endif
 
+__global__
+void
+print_indivs(uint nb_indivs, cuIndividual* indivs)
+{
+    for (int indiv_idx = 0; indiv_idx < 1 /* nb_indivs */; ++indiv_idx) {
+        const auto& indiv = indivs[indiv_idx];
+
+        printf("size: %u\n", indiv.size);
+        printf("genom: ");
+        for (uint i = indiv.size - 1; i; --i)
+            printf("%c", indiv.genome[i]);
+        printf("%c\n", indiv.genome[0]);
+
+        printf("promoters: ");
+        for (uint i = indiv.size - 1; i; --i) {
+                printf("%u|", indiv.promoters[i]);
+        }
+        printf("%u\n", indiv.promoters[0]);
+
+        printf("terminators: ");
+        for (uint i = indiv.size - 1; i; --i)
+            printf("%c", '0' + indiv.terminators[i]);
+        printf("%c\n", '0' + indiv.terminators[0]);
+
+        printf("prot_start: ");
+        for (uint i = indiv.size - 1; i; --i)
+            printf("%c", '0' + indiv.prot_start[i]);
+        printf("%c\n", '0' + indiv.prot_start[0]);
+
+        printf("nb_terminator: %u\n", indiv.nb_terminator);
+        printf("nb_prot_start: %u\n", indiv.nb_prot_start);
+        // terminator_idxs
+        // prot_start_idxs
+
+        printf("nb_rnas: %u\n", indiv.nb_rnas);
+        indiv.print_rnas();
+
+        printf("nb_gene: %u\n", indiv.nb_gene);
+        indiv.print_gathered_genes();
+        indiv.print_proteins();
+
+        indiv.print_phenotype();
+        printf("fitness: %1.10e\n", indiv.fitness);
+    }
+    printf("\n");
+}
+
 cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     grid_height_ = cpu_exp->grid_height_;
     grid_width_ = cpu_exp->grid_height_;
@@ -116,6 +163,7 @@ void cuExpManager::evaluate_population() {
     CHECK_KERNEL;
     search_patterns<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
+    print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     sparse_meta<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
     transcription<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
