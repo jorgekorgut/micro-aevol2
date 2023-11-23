@@ -203,11 +203,11 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         printf("genom: ");
         print_bitset(indiv.genome, indiv.block_size);
 
-        uint8_t* promoters;
-        for (uint i = indiv.size; i; --i) {
-                printf("%u ", indiv.promoters[i]);
+        printf("promoters: ");
+        for (uint i = indiv.size - 1; i; --i) {
+                printf("%u|", indiv.promoters[i]);
         }
-        printf("\n");
+        printf("%u\n", indiv.promoters[0]);
 
         printf("terminators: ");
         print_bitset(indiv.terminators, indiv.block_size);
