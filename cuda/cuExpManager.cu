@@ -179,6 +179,59 @@ void cuExpManager::evaluate_population() {
     CHECK_KERNEL;
 }
 
+__device__
+void
+print_bitset(block* set, uint size)
+{
+    for (; size; --size) {
+        for (uint idx = 64; idx; --idx) {
+            printf("%u", 1 & (set[size - 1] >> (idx - 1)));
+        }
+    }
+    printf("\n");
+}
+
+__global__
+void
+print_indivs(uint nb_indivs, cuIndividual* indivs)
+{
+    for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
+        const auto& indiv = indivs[indiv_idx];
+
+        printf("size: %u\n", indiv.size);
+        printf("block_size: %u\n", indiv.block_size);
+        printf("genom: ");
+        print_bitset(indiv.genome, indiv.block_size);
+
+        uint8_t* promoters;
+        for (uint i = indiv.size; i; --i) {
+                printf("%u ", indiv.promoters[i]);
+        }
+        printf("\n");
+
+        printf("terminators: ");
+        print_bitset(indiv.terminators, indiv.block_size);
+        printf("prot_start: ");
+        print_bitset(indiv.prot_start, indiv.block_size);
+
+        printf("nb_terminator: %u\n", indiv.nb_terminator);
+        printf("nb_prot_start: %u\n", indiv.nb_prot_start);
+        // terminator_idxs
+        // prot_start_idxs
+
+        printf("nb_rnas: %u\n", indiv.nb_rnas);
+        indiv.print_rnas();
+
+        printf("nb_gene: %u\n", indiv.nb_gene);
+        indiv.print_gathered_genes();
+        indiv.print_proteins();
+
+        indiv.print_phenotype();
+        printf("fitness: %1.10e\n", indiv.fitness);
+    }
+    printf("\n");
+}
+
 void cuExpManager::run_evolution(int nb_gen) {
     const int MB_SIZE = 8;
     // Set a heap size of MB_SIZE megabytes.
@@ -372,58 +425,6 @@ void cuExpManager::device_data_destructor() {
 // __CUDA KERNELS__
 
 // Evolution
-
-inline void
-print_bitset(block* set, uint size)
-{
-    for (; size; --size) {
-        for (uint idx = 64; idx; --idx) {
-            printf("%u", 1 & (set[size - 1] >> (idx - 1)));
-        }
-    }
-    printf("\n");
-}
-
-__global__
-void
-print_indivs(cuIndividual* indivs)
-{
-    for (int indiv_idx = 0; indiv_idx < nb_indivs; ++indiv_idx) {
-        const auto& indiv = individuals[indiv_idx];
-
-        printf("size: %u\n", indiv.size);
-        printf("block_size: %u\n", indiv.block_size);
-        printf("genom: ");
-        print_bitset(indiv.genome, indiv.block_size);
-
-        uint8_t* promoters;
-        for (uint j = indiv.size; j; --j) {
-                printf("%u ", indiv.promoters[i]);
-        }
-        printf("\n");
-
-        printf("terminators: ");
-        print_bitset(indiv.terminators, indiv.block_size);
-        printf("prot_start: ");
-        print_bitset(indiv.prot_start, indiv.block_size);
-
-        printf("nb_terminator: %u\n", indiv.nb_terminator);
-        printf("nb_prot_start: %u\n", indiv.nb_prot_start);
-        // terminator_idxs
-        // prot_start_idxs
-
-        printf("nb_rnas: %u\n", indiv.nb_rnas);
-        indiv.print_rnas();
-
-        printf("nb_gene: %u\n", indiv.nb_gene);
-        indiv.print_gathered_genes();
-        indiv.print_proteins();
-
-        indiv.print_phenotype();
-        printf("fitness: %1.10e\n", indiv.fitness);
-    }
-    printf("\n");
-}
 
 __global__
 void check_result(uint nb_indivs, cuIndividual* individuals) {
