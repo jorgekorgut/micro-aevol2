@@ -88,6 +88,38 @@ get_block(block* genome, uint pos, uint len)
 	return value;
 }
 
+#if 0
+__device__ uint64_t atomicOr(uint64_t* address, uint64_t val)
+{
+    uint64_t assumed, old = *address;
+
+    do {
+        assumed = old;
+        old = atomicCAS(address, assumed, val | assumed);
+
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+    } while (assumed != old);
+
+    return old;
+}
+
+__device__ uint64_t atomicAnd(uint64_t* address, uint64_t val)
+{
+    unsigned long long int* address_as_ull =
+                              (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
+
+    do {
+        assumed = old;
+        old = atomicCAS(address_as_ull, assumed, val & assumed);
+
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+    } while (assumed != old);
+
+    return old;
+}
+#endif
+
 __device__
 const bool
 set_bit(block* bitset, uint pos, bool value)
@@ -98,24 +130,69 @@ set_bit(block* bitset, uint pos, bool value)
 
 	if (value)
 		bitset[bidx] |= (1 << idx);
+		// atomicOr(bitset + bidx, 1 << idx);
 	else
 		bitset[bidx] &= ~(1 << idx);
+		// atomicAnd(bitset + bidx, ~(1 << idx));
 
 	return value;
 }
 
 __device__ void cuIndividual::search_patterns() {
+    __shared__ uint nb_terms;
+    __shared__ uint nb_prots;
+
     // One block per individual
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
+    uint block_id = blockIdx.x;
 
-    __shared__ uint nb_terms;
-    __shared__ uint nb_prots;
+    printf("%u (%u): %u\n", block_id, rr_width, idx);
 
     if (!idx)
         nb_terms = nb_prots = 0;
     __syncthreads();
 
+    for (uint bid = idx; bid < block_size; bid += rr_width) {
+        block curr = genome[bid];
+        block next = bid < block_size - 1 ? genome[bid + 1] : 0;
+
+        block new_term = terminators[bid];
+        block new_prot = prot_start[bid];
+        for (uint i = 0; i < 64; ++i) {
+            uint position = bid * 64 + i;
+
+            if (position >= size)
+                break
+
+            promoters[position] = is_promoter(curr);
+            bool term = is_terminator(curr);
+            bool prot = is_prot_start(curr);
+
+            if (term)
+                new_term |= (1 << i);
+            else
+                new_term &= ~(1 << i);
+
+            if (prot)
+                new_prot |= (1 << i);
+            else
+                new_prot &= ~(1 << i);
+
+            atomicAdd(&nb_terms, term);
+            atomicAdd(&nb_prots, prot);
+
+            curr >>= 1;
+            curr |= (next << 64 - i - 1);
+        }
+
+        printf("%lu: term: %lu, prot: %lu\n", bid, new_term, new_prot);
+
+        terminators[bid] = new_term;
+        prot_start[bid] = new_prot;
+    }
+
+#if 0
     // TODO: optimize for cache misses
     for (uint position = idx; position < size; position += rr_width) {
         // NOTE: We don't need the circular version because of the "phantom
@@ -125,14 +202,36 @@ __device__ void cuIndividual::search_patterns() {
         promoters[position] = is_promoter(genome_at_pos);
         // TODO: are the arrays zero initialized? We could first check if the
         // value is 1 and only then call set_bit to save operations
+        // printf("%lu: %lu: %u\n", position, genome_at_pos & ((1 << 11) - 1), is_terminator(genome_at_pos));
         atomicAdd(&nb_terms, set_bit(terminators, position, is_terminator(genome_at_pos)));
         atomicAdd(&nb_prots, set_bit(prot_start, position, is_prot_start(genome_at_pos)));
     }
+#endif
+
 
     __syncthreads();
     if (!idx) {
         nb_terminator = nb_terms;
         nb_prot_start = nb_prots;
+        // TODO: dynamically allocate terminator_idxs?
+
+#if 0
+        for (uint i = 0; i < 5000; ++i) {
+                set_bit(terminators, i, 1);
+        }
+        uint value = 0;
+        for (uint i = 0; i < 78; ++i) {
+            for (uint j = 0; j < 64; ++j) {
+                printf("%u: %u\n", i * 64 + j, value);
+                if (value)
+                    terminators[i] |= (1 << j);
+                else
+                    terminators[i] &= ~(1 << j);
+                // set_bit(terminators, i * 32 + j, value);
+            }
+            value = !value;
+        }
+#endif
     }
 }
 
