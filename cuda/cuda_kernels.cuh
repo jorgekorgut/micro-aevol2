@@ -64,7 +64,8 @@ __global__
 void init_device_population(int nb_indivs, uint block_length, bool extra_block,
                             int genome_length, cuIndividual* all_individuals,
                             block* all_genomes, uint8_t* all_promoters,
-                            block* all_terminators, block* all_prot_start,
+                            block* all_terminators, uint* all_terms_idx,
+                            block* all_prot_start, uint* all_prots_idxs,
                             cuRNA* all_rnas);
 
 __global__

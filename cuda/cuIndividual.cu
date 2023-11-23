@@ -109,9 +109,12 @@ __device__ void cuIndividual::search_patterns() {
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
 
-    // TODO: could theoretically be left out since it is done by clean_metadata
-    nb_terminator = 0;
-    nb_prot_start = 0;
+    __shared__ uint nb_terms;
+    __shared__ uint nb_prots;
+
+    if (!idx)
+        nb_terms = nb_prots = 0;
+    __syncthreads();
 
     // TODO: optimize for cache misses
     for (uint position = idx; position < size; position += rr_width) {
@@ -122,15 +125,15 @@ __device__ void cuIndividual::search_patterns() {
         promoters[position] = is_promoter(genome_at_pos);
         // TODO: are the arrays zero initialized? We could first check if the
         // value is 1 and only then call set_bit to save operations
-        nb_terminator += set_bit(terminators, position, is_terminator(genome_at_pos));
-        nb_prot_start += set_bit(prot_start, position, is_prot_start(genome_at_pos));
+        atomicAdd(&nb_terms, set_bit(terminators, position, is_terminator(genome_at_pos)));
+        atomicAdd(&nb_prots, set_bit(prot_start, position, is_prot_start(genome_at_pos)));
     }
 
-    // TODO: I think we don't need the +1
-    terminator_idxs = new uint[nb_terminator + (nb_terminator < size)]{};
-    prot_start_idxs = new uint[nb_prot_start + (nb_prot_start < size)]{};
-    assert(terminator_idxs != nullptr);
-    assert(prot_start_idxs != nullptr);
+    __syncthreads();
+    if (!idx) {
+        nb_terminator = nb_terms;
+        nb_prot_start = nb_prots;
+    }
 }
 
 
@@ -202,11 +205,6 @@ __device__ void cuIndividual::clean_metadata() {
     list_gene = nullptr;
     delete[] list_protein;
     list_protein = nullptr;
-
-    delete[] terminator_idxs;
-    terminator_idxs = nullptr;
-    delete[] prot_start_idxs;
-    prot_start_idxs = nullptr;
 }
 
 __device__ void cuIndividual::prepare_rnas() {

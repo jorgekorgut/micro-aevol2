@@ -345,10 +345,14 @@ void cuExpManager::transfer_to_device() {
     block* all_terminators;
     block* all_prot_start;
     cuRNA* all_rnas;
+    uint *all_terms_idxs;
+    uint *all_prots_idxs;
     checkCuda(cudaMalloc(&(all_promoters), all_genome_size * sizeof(*all_promoters)));
     checkCuda(cudaMalloc(&(all_terminators), all_block_size * sizeof(*all_terminators)));
     checkCuda(cudaMalloc(&(all_prot_start), all_block_size * sizeof(*all_prot_start)));
     checkCuda(cudaMalloc(&(all_rnas), all_genome_size * sizeof(*all_rnas)));
+    checkCuda(cudaMalloc(&(all_terms_idxs), all_genome_size * sizeof(*all_terms_idxs)));
+    checkCuda(cudaMalloc(&(all_prots_idxs), all_genome_size * sizeof(*all_prots_idxs)));
 
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
@@ -357,7 +361,7 @@ void cuExpManager::transfer_to_device() {
     }
 
     init_device_population<<<1, 1>>>(nb_indivs_, block_length_, block_length_ != block_length_phantom_, genome_length_, device_individuals_, all_child_genome_,
-                                     all_promoters, all_terminators, all_prot_start, all_rnas);
+                                     all_promoters, all_terminators, all_terms_idxs, all_prot_start, all_prots_idxs, all_rnas);
     CHECK_KERNEL
 
     // Transfer phenotypic target
@@ -412,7 +416,9 @@ void cuExpManager::device_data_destructor() {
     checkCuda(cudaMemcpy(&tmp, device_individuals_, sizeof(cuIndividual), cudaMemcpyDeviceToHost));
     checkCuda(cudaFree(tmp.promoters));
     checkCuda(cudaFree(tmp.terminators));
+    checkCuda(cudaFree(tmp.terminator_idxs));
     checkCuda(cudaFree(tmp.prot_start));
+    checkCuda(cudaFree(tmp.prot_start_idxs));
     checkCuda(cudaFree(tmp.list_rnas));
     checkCuda(cudaFree(all_parent_genome_));
     checkCuda(cudaFree(all_child_genome_));
@@ -657,7 +663,8 @@ void
 init_device_population(int nb_indivs, uint block_length, bool extra_block,
                        int genome_length, cuIndividual* all_individuals,
                        block* all_genomes, uint8_t* all_promoters,
-                       block* all_terminators, block* all_prot_start,
+                       block* all_terminators, uint* all_terms_idxs,
+                       block* all_prot_start, uint* all_prots_idxs,
                        cuRNA* all_rnas)
 {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -673,9 +680,9 @@ init_device_population(int nb_indivs, uint block_length, bool extra_block,
         local_indiv.genome = all_genomes + offset + i * extra_block;
         local_indiv.promoters = all_promoters + gen_offset;
         local_indiv.terminators = all_terminators + offset;
+        local_indiv.terminator_idxs = all_terms_idxs + gen_offset;
         local_indiv.prot_start = all_prot_start + offset;
-        local_indiv.terminator_idxs = nullptr;
-        local_indiv.prot_start_idxs = nullptr;
+        local_indiv.prot_start_idxs = all_prots_idxs + gen_offset;
         local_indiv.list_rnas = all_rnas + gen_offset;
         local_indiv.nb_terminator = 0;
         local_indiv.nb_prot_start = 0;
