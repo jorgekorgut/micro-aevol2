@@ -163,7 +163,7 @@ __device__ void cuIndividual::search_patterns() {
             uint position = bid * 64 + i;
 
             if (position >= size)
-                break
+                break;
 
             promoters[position] = is_promoter(curr);
             bool term = is_terminator(curr);
