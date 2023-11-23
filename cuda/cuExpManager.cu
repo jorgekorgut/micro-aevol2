@@ -353,7 +353,7 @@ void cuExpManager::transfer_to_device() {
     // Transfer data from individual to device
     for (int i = 0; i < nb_indivs_; ++i) {
         auto indiv_genome = all_child_genome_ + (i * block_length_phantom_);
-        checkCuda(cudaMemcpy(indiv_genome, host_individuals_[i], block_length_phantom_, cudaMemcpyHostToDevice));
+        checkCuda(cudaMemcpy(indiv_genome, host_individuals_[i], block_length_phantom_ * sizeof(block), cudaMemcpyHostToDevice));
     }
 
     init_device_population<<<1, 1>>>(nb_indivs_, block_length_, block_length_ != block_length_phantom_, genome_length_, device_individuals_, all_child_genome_,
@@ -389,7 +389,7 @@ void cuExpManager::transfer_to_host() const {
         // TODO: is it a problem that we copy the "phantom space" too? On master
         // only genome_length_ is copied. Maybe we need to use block_length_ and
         // zero out the bits after genome_length_
-        checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome, block_length_phantom_, cudaMemcpyDeviceToHost));
+        checkCuda(cudaMemcpy(host_individuals_[i], indiv_genome, block_length_phantom_ * sizeof(block), cudaMemcpyDeviceToHost));
     }
 
     RandService tmp;
