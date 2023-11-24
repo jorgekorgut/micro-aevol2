@@ -8,11 +8,18 @@
 
 __device__ uint8_t is_promoter(const block sequence) {
   uint32_t comparation = sequence ^ prom_seq;
-  int dist_lead = __popc(comparation);
+
+  // int dist_lead = __popc(comparation);
   // int dist_lead = std::popcount(comparation);
 
-  if (dist_lead > PROM_MAX_DIFF)
-    return 0b1111;
+  uint dist_lead = 0;
+  for (; comparation; comparation >>= 1) {
+    dist_lead += comparation & 1;
+
+    if (dist_lead > PROM_MAX_DIFF)
+      return 0b1111;
+  }
+
   return dist_lead;
 }
 

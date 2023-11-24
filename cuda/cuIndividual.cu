@@ -178,6 +178,9 @@ __device__ void cuIndividual::search_patterns() {
                 break;
 
             promoters[position] = is_promoter(curr);
+            if (!block_id && promoters[position] != 15)
+                printf("%u: %u\n", position, promoters[position]);
+
             bool term = is_terminator(curr);
             bool prot = is_prot_start(curr);
 
