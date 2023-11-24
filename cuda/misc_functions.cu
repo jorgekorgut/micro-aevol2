@@ -7,7 +7,7 @@
 #include "aevol_constants.h"
 
 __device__ uint8_t is_promoter(const block sequence) {
-  uint32_t comparation = sequence ^ prom_seq;
+  uint32_t comparation = prom_seq ^ (sequence & ((1ul << PROM_SIZE) - 1));
 
   // int dist_lead = __popc(comparation);
   // int dist_lead = std::popcount(comparation);
