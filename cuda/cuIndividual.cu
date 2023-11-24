@@ -88,14 +88,15 @@ get_block(block* genome, uint pos, uint len)
 	return value;
 }
 
-#if 0
 __device__ uint64_t atomicOr(uint64_t* address, uint64_t val)
 {
-    uint64_t assumed, old = *address;
+    unsigned long long int* address_as_ull =
+                              (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
 
     do {
         assumed = old;
-        old = atomicCAS(address, assumed, val | assumed);
+        old = atomicCAS(address_as_ull, assumed, val | assumed);
 
     // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
     } while (assumed != old);
@@ -118,24 +119,34 @@ __device__ uint64_t atomicAnd(uint64_t* address, uint64_t val)
 
     return old;
 }
-#endif
 
 __device__
 const bool
-set_bit(block* bitset, uint pos, bool value)
+set_bit_to(block* bitset, uint pos, bool value)
 {
-	// TODO: use a shift
-	uint bidx = pos / blockSizeBites;
-	uint idx = pos & (blockSizeBites - 1);
+    // TODO: use a shift
+    uint bidx = pos / blockSizeBites;
+    uint idx = pos & (blockSizeBites - 1);
 
-	if (value)
-		bitset[bidx] |= (1 << idx);
-		// atomicOr(bitset + bidx, 1 << idx);
-	else
-		bitset[bidx] &= ~(1 << idx);
-		// atomicAnd(bitset + bidx, ~(1 << idx));
+    if (value)
+        // bitset[bidx] |= (1ull << idx);
+        atomicOr(bitset + bidx, 1ull << idx);
+    else
+        // bitset[bidx] &= ~(1ull << idx);
+        atomicAnd(bitset + bidx, ~(1ull << idx));
 
-	return value;
+    return value;
+}
+
+__device__
+inline void
+set_bit(block* bitset, uint pos)
+{
+    // TODO: use a shift
+    uint bidx = pos / blockSizeBites;
+    uint idx = pos & (blockSizeBites - 1);
+
+    bitset[bidx] |= (1ull << idx);
 }
 
 __device__ void cuIndividual::search_patterns() {
@@ -147,18 +158,19 @@ __device__ void cuIndividual::search_patterns() {
     uint rr_width = blockDim.x;
     uint block_id = blockIdx.x;
 
-    printf("%u (%u): %u\n", block_id, rr_width, idx);
-
     if (!idx)
         nb_terms = nb_prots = 0;
     __syncthreads();
 
+#if 1
     for (uint bid = idx; bid < block_size; bid += rr_width) {
         block curr = genome[bid];
+        // TODO: theoretically this would break with a size that is less than
+        // 22 away from the next 64 block (e.g. 63 or 5050)
         block next = bid < block_size - 1 ? genome[bid + 1] : 0;
 
-        block new_term = terminators[bid];
-        block new_prot = prot_start[bid];
+        block new_term = 0;
+        block new_prot = 0;
         for (uint i = 0; i < 64; ++i) {
             uint position = bid * 64 + i;
 
@@ -169,31 +181,25 @@ __device__ void cuIndividual::search_patterns() {
             bool term = is_terminator(curr);
             bool prot = is_prot_start(curr);
 
-            if (term)
-                new_term |= (1 << i);
-            else
-                new_term &= ~(1 << i);
+            if (term) {
+                new_term |= 1ull << i;
+                atomicAdd(&nb_terms, 1);
+            }
 
-            if (prot)
-                new_prot |= (1 << i);
-            else
-                new_prot &= ~(1 << i);
-
-            atomicAdd(&nb_terms, term);
-            atomicAdd(&nb_prots, prot);
+            if (prot) {
+                new_prot |= 1ull << i;
+                atomicAdd(&nb_prots, 1);
+            }
 
             curr >>= 1;
             curr |= (next << 64 - i - 1);
         }
 
-        printf("%lu: term: %lu, prot: %lu\n", bid, new_term, new_prot);
-
         terminators[bid] = new_term;
         prot_start[bid] = new_prot;
     }
 
-#if 0
-    // TODO: optimize for cache misses
+#else
     for (uint position = idx; position < size; position += rr_width) {
         // NOTE: We don't need the circular version because of the "phantom
         // space" (see cuExpManager.cu)
@@ -203,8 +209,8 @@ __device__ void cuIndividual::search_patterns() {
         // TODO: are the arrays zero initialized? We could first check if the
         // value is 1 and only then call set_bit to save operations
         // printf("%lu: %lu: %u\n", position, genome_at_pos & ((1 << 11) - 1), is_terminator(genome_at_pos));
-        atomicAdd(&nb_terms, set_bit(terminators, position, is_terminator(genome_at_pos)));
-        atomicAdd(&nb_prots, set_bit(prot_start, position, is_prot_start(genome_at_pos)));
+        atomicAdd(&nb_terms, set_bit_to(terminators, position, is_terminator(genome_at_pos)));
+        atomicAdd(&nb_prots, set_bit_to(prot_start, position, is_prot_start(genome_at_pos)));
     }
 #endif
 

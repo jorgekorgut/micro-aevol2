@@ -216,7 +216,7 @@ void cuExpManager::evaluate_population() {
     CHECK_KERNEL;
     printf("clean_metadata done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
-    search_patterns<<<my_gridDim, my_blockDim>>>(1, device_individuals_);
+    search_patterns<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
     printf("search_patterns done\n");
     print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
