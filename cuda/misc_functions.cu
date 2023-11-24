@@ -65,7 +65,7 @@ count_bitset(block* set, uint size)
   for (i = 0; i < size / 64; ++i)
     num += __popc(set[i]);
   if (mod)
-    num += __popc(set[i] & ((1 << mod) - 1));
+    num += __popc(set[i] & ((1llu << mod) - 1));
 
   return num;
 }

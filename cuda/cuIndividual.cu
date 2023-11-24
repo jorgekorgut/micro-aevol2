@@ -78,11 +78,11 @@ get_block(block* genome, uint pos, uint len)
 	uint bidx = pos / blockSizeBites;
 	uint pos_idx = pos & (blockSizeBites - 1);
 
-	block value = (genome[bidx] >> pos_idx) & ((1 << len) - 1);
+	block value = (genome[bidx] >> pos_idx) & ((1llu << len) - 1);
 
 	if (pos_idx + len > blockSizeBites) {
 		uint start_nbits = blockSizeBites - pos_idx;
-		value |= (genome[bidx + 1] << start_nbits) & ((1 << len) - 1);
+		value |= (genome[bidx + 1] << start_nbits) & ((1llu << len) - 1);
 	}
 
 	return value;
@@ -130,10 +130,10 @@ set_bit_to(block* bitset, uint pos, bool value)
 
     if (value)
         // bitset[bidx] |= (1ull << idx);
-        atomicOr(bitset + bidx, 1ull << idx);
+        atomicOr(bitset + bidx, 1llu << idx);
     else
         // bitset[bidx] &= ~(1ull << idx);
-        atomicAnd(bitset + bidx, ~(1ull << idx));
+        atomicAnd(bitset + bidx, ~(1llu << idx));
 
     return value;
 }
@@ -146,7 +146,7 @@ set_bit(block* bitset, uint pos)
     uint bidx = pos / blockSizeBites;
     uint idx = pos & (blockSizeBites - 1);
 
-    bitset[bidx] |= (1ull << idx);
+    bitset[bidx] |= (1llu << idx);
 }
 
 __device__ void cuIndividual::search_patterns() {
@@ -185,12 +185,12 @@ __device__ void cuIndividual::search_patterns() {
             bool prot = is_prot_start(curr);
 
             if (term) {
-                new_term |= 1ull << i;
+                new_term |= 1llu << i;
                 atomicAdd(&nb_terms, 1);
             }
 
             if (prot) {
-                new_prot |= 1ull << i;
+                new_prot |= 1llu << i;
                 atomicAdd(&nb_prots, 1);
             }
 
