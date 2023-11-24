@@ -14,6 +14,7 @@
 
 #include "cuIndividual.cuh"
 #include "cuda_kernels.cuh"
+#include "misc_functions.cuh"
 
 using namespace std::chrono;
 using namespace std;
@@ -34,80 +35,6 @@ checkCuda(cudaGetLastError());
 #define checkCuda(X) X
 #define CHECK_KERNEL
 #endif
-
-void
-convert_char_to_bitset(const char* arr, uint size, block* set)
-{
-    // TODO: do not hardcode 64
-    block new_block;
-    uint i, bid;
-
-    for (i = bid = 0; i < (size & ~63); i += 64, ++bid) {
-        new_block = 0;
-        for (uint j = 0; j < 64; ++j)
-            new_block |= (arr[i + j] - '0') << j;
-
-        set[bid] = new_block;
-    }
-
-    new_block = 0;
-    for (uint j = 0; i < size; ++i, ++j)
-        new_block |= (arr[i] - '0') << j;
-    set[bid] = new_block;
-}
-
-__device__
-void
-print_bitset(block* set, uint size)
-{
-    for (; size; --size) {
-        for (uint idx = 64; idx; --idx) {
-            printf("%u", 1 & (set[size - 1] >> (idx - 1)));
-        }
-    }
-    printf("\n");
-}
-
-__global__
-void
-print_indivs(uint nb_indivs, cuIndividual* indivs)
-{
-    for (int indiv_idx = 0; indiv_idx < 1 /* nb_indivs */; ++indiv_idx) {
-        const auto& indiv = indivs[indiv_idx];
-
-        printf("size: %u\n", indiv.size);
-        printf("block_size: %u\n", indiv.block_size);
-        printf("genom: ");
-        print_bitset(indiv.genome, indiv.block_size);
-
-        printf("promoters: ");
-        for (uint i = indiv.size - 1; i; --i) {
-                printf("%u|", indiv.promoters[i]);
-        }
-        printf("%u\n", indiv.promoters[0]);
-
-        printf("terminators: ");
-        print_bitset(indiv.terminators, indiv.block_size);
-        printf("prot_start: ");
-        print_bitset(indiv.prot_start, indiv.block_size);
-
-        printf("nb_terminator: %u\n", indiv.nb_terminator);
-        printf("nb_prot_start: %u\n", indiv.nb_prot_start);
-        // terminator_idxs
-        // prot_start_idxs
-
-        printf("nb_rnas: %u\n", indiv.nb_rnas);
-        indiv.print_rnas();
-
-        printf("nb_gene: %u\n", indiv.nb_gene);
-        indiv.print_gathered_genes();
-        indiv.print_proteins();
-
-        indiv.print_phenotype();
-        printf("fitness: %1.10e\n", indiv.fitness);
-    }
-    printf("\n");
-}
 
 cuExpManager::cuExpManager(const ExpManager* cpu_exp) {
     grid_height_ = cpu_exp->grid_height_;
@@ -219,7 +146,7 @@ void cuExpManager::evaluate_population() {
     search_patterns<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
     printf("search_patterns done\n");
-    print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
+    // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     sparse_meta<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
     printf("sparse_meta done\n");

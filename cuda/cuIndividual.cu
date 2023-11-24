@@ -9,146 +9,6 @@
 #include <cstdio>
 #include <cassert>
 
-#define blockSizeBites (sizeof(block) * 8)
-
-__device__ inline int fast_mod(const int input, const int ceil)
-{
-	// TODO: Use (& (ceil - 1)) for powers of 2
-    // apply the modulo operator only when needed
-    // (i.e. when the input is greater than the ceiling)
-    return input >= ceil ? input % ceil : input;
-    // NB: the assumption here is that the numbers are positive
-}
-
-__device__ const block get_block_circ(block* genome, uint size, uint bit_index, uint length) {
-
-  if(bit_index >= size){
-      bit_index -= size;
-  }
-
-  block value = 0;
-  int blockIndex = bit_index / blockSizeBites;
-  int bitIndex = fast_mod(bit_index, blockSizeBites);
-
-  // If the mask is truncated by blocks or end of bitset
-  if (bitIndex + length >= blockSizeBites || bit_index + length >= size)
-  {
-      int nextBlockIndex = blockIndex + 1;
-      // uint blockCount = std::ceil(size / (float)blockSizeBites);
-      // uint blockCount = size / blockSizeBites + !!(fast_mod(size, blockSizeBites));
-      uint blockCount = size / blockSizeBites + !!(size & (blockSizeBites - 1));
-
-      if (nextBlockIndex > blockCount - 1)
-      {
-          nextBlockIndex = 0;
-      }
-
-      block leftMask = 1;
-      leftMask <<= length;
-      leftMask -= 1;
-
-      value = genome[blockIndex] >> bitIndex | genome[nextBlockIndex] << (blockSizeBites - bitIndex);
-
-      if (bit_index + length >= size)
-      {
-          int lastBlockRealSize = fast_mod(size, blockSizeBites);
-          value |= genome[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
-      }
-
-      value = value & leftMask;
-  }
-  else
-  {
-      block rightMask = 1;
-      rightMask <<= bitIndex + length;
-      rightMask -= 1;
-
-      value = (genome[blockIndex] & rightMask) >> bitIndex;
-  }
-
-  return value;
-}
-
-// No safety checks.
-__device__
-const block
-get_block(block* genome, uint pos, uint len)
-{
-	// pos >> 6
-	uint bidx = pos / blockSizeBites;
-	uint pos_idx = pos & (blockSizeBites - 1);
-
-	block value = (genome[bidx] >> pos_idx) & ((1llu << len) - 1);
-
-	if (pos_idx + len > blockSizeBites) {
-		uint start_nbits = blockSizeBites - pos_idx;
-		value |= (genome[bidx + 1] << start_nbits) & ((1llu << len) - 1);
-	}
-
-	return value;
-}
-
-__device__ uint64_t atomicOr(uint64_t* address, uint64_t val)
-{
-    unsigned long long int* address_as_ull =
-                              (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-
-    do {
-        assumed = old;
-        old = atomicCAS(address_as_ull, assumed, val | assumed);
-
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
-    } while (assumed != old);
-
-    return old;
-}
-
-__device__ uint64_t atomicAnd(uint64_t* address, uint64_t val)
-{
-    unsigned long long int* address_as_ull =
-                              (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-
-    do {
-        assumed = old;
-        old = atomicCAS(address_as_ull, assumed, val & assumed);
-
-    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
-    } while (assumed != old);
-
-    return old;
-}
-
-__device__
-const bool
-set_bit_to(block* bitset, uint pos, bool value)
-{
-    // TODO: use a shift
-    uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
-
-    if (value)
-        // bitset[bidx] |= (1ull << idx);
-        atomicOr(bitset + bidx, 1llu << idx);
-    else
-        // bitset[bidx] &= ~(1ull << idx);
-        atomicAnd(bitset + bidx, ~(1llu << idx));
-
-    return value;
-}
-
-__device__
-inline void
-set_bit(block* bitset, uint pos)
-{
-    // TODO: use a shift
-    uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
-
-    bitset[bidx] |= (1llu << idx);
-}
-
 __device__ void cuIndividual::search_patterns() {
     __shared__ uint nb_terms;
     __shared__ uint nb_prots;
@@ -178,8 +38,6 @@ __device__ void cuIndividual::search_patterns() {
                 break;
 
             promoters[position] = is_promoter(curr);
-            if (!block_id && promoters[position] != 15)
-                printf("%u: %u\n", position, promoters[position]);
 
             bool term = is_terminator(curr);
             bool prot = is_prot_start(curr);
@@ -217,30 +75,11 @@ __device__ void cuIndividual::search_patterns() {
     }
 #endif
 
-
     __syncthreads();
     if (!idx) {
         nb_terminator = nb_terms;
         nb_prot_start = nb_prots;
         // TODO: dynamically allocate terminator_idxs?
-
-#if 0
-        for (uint i = 0; i < 5000; ++i) {
-                set_bit(terminators, i, 1);
-        }
-        uint value = 0;
-        for (uint i = 0; i < 78; ++i) {
-            for (uint j = 0; j < 64; ++j) {
-                printf("%u: %u\n", i * 64 + j, value);
-                if (value)
-                    terminators[i] |= (1 << j);
-                else
-                    terminators[i] &= ~(1 << j);
-                // set_bit(terminators, i * 32 + j, value);
-            }
-            value = !value;
-        }
-#endif
     }
 }
 

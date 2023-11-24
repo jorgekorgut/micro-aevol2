@@ -6,6 +6,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include "cuIndividual.cuh"
 #include "../aevol_constants.h"
 
 /// General Purpose
@@ -64,8 +65,23 @@ __device__ bool is_prot_start(block sequence);
 
 __device__ uint8_t translate_to_codon(const block* seq);
 
+__device__ inline int fast_mod(const int input, const int ceil);
+
 __device__ uint count_bitset(block* set, uint size);
 __device__ uint sparse_bitset(block* set, uint size, uint* idcs);
+
+__device__ uint64_t atomicOr(uint64_t* address, uint64_t val);
+__device__ uint64_t atomicAnd(uint64_t* address, uint64_t val);
+
+__device__ const bool set_bit_to(block* bitset, uint pos, bool value);
+__device__ inline void set_bit(block* bitset, uint pos);
+
+__device__ const block get_block_circ(block* genome, uint size, uint bit_index, uint length);
+__device__ const block get_block(block* genome, uint pos, uint len);
+
+__device__ void convert_char_to_bitset(const char* arr, uint size, block* set);
+__device__ void print_bitset(block* set, uint size);
+__global__ void print_indivs(uint nb_indivs, cuIndividual* indivs);
 
 // circular forward distance
 inline __device__ uint get_distance(uint a, uint b, uint size){

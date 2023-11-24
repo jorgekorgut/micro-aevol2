@@ -11,6 +11,7 @@
 
 typedef u_int64_t block;
 typedef boost::dynamic_bitset<block, boost::alignment::aligned_allocator<block, 16>> bitset;
+#define blockSizeBites (sizeof(block) * 8)
 
 constexpr int8_t NB_BASE = 2;
 constexpr int8_t CODON_SIZE = 3;
