@@ -55,14 +55,26 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         printf("%u\n", indiv.promoters[0]);
 
         printf("terminators: ");
-        for (uint i = indiv.size - 1; i; --i)
-            printf("%c", '0' + indiv.terminators[i]);
-        printf("%c\n", '0' + indiv.terminators[0]);
+        if (indiv.terminators[0] == 0 || indiv.terminators[0] == 1) {
+            for (uint i = indiv.size - 1; i; --i)
+                printf("%c", '0' + indiv.terminators[i]);
+            printf("%c\n", '0' + indiv.terminators[0]);
+        } else {
+            for (uint i = indiv.nb_terminator - 1; i; --i)
+                printf("%u, ", indiv.terminators[i]);
+            printf("%u\n", indiv.terminators[0]);
+        }
 
         printf("prot_start: ");
-        for (uint i = indiv.size - 1; i; --i)
-            printf("%c", '0' + indiv.prot_start[i]);
-        printf("%c\n", '0' + indiv.prot_start[0]);
+        if (indiv.prot_start[0] == 0 || indiv.prot_start[0] == 1) {
+            for (uint i = indiv.size - 1; i; --i)
+                printf("%c", '0' + indiv.prot_start[i]);
+            printf("%c\n", '0' + indiv.prot_start[0]);
+        } else {
+            for (uint i = indiv.nb_prot_start - 1; i; --i)
+                printf("%u, ", indiv.prot_start[i]);
+            printf("%u\n", indiv.prot_start[0]);
+        }
 
         printf("nb_terminator: %u\n", indiv.nb_terminator);
         printf("nb_prot_start: %u\n", indiv.nb_prot_start);
