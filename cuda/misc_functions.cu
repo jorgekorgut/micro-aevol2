@@ -289,9 +289,23 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         printf("%u\n", indiv.promoters[0]);
 
         printf("terminators: ");
-        print_bitset(indiv.terminators, indiv.block_size);
+        if (!indiv.terminator_idxs[0]) {
+            print_bitset(indiv.terminators, indiv.block_size);
+        } else {
+            for (uint i = indiv.nb_terminator - 1; i; --i) {
+                printf("%u, ", indiv.terminator_idxs[i]);
+            }
+            printf("%u\n", indiv.terminator_idxs[0]);
+        }
         printf("prot_start: ");
-        print_bitset(indiv.prot_start, indiv.block_size);
+        if (!indiv.prot_start_idxs[0]) {
+            print_bitset(indiv.prot_start, indiv.block_size);
+        } else {
+            for (uint i = indiv.nb_prot_start - 1; i; --i) {
+                printf("%u, ", indiv.prot_start_idxs[i]);
+            }
+            printf("%u\n", indiv.prot_start_idxs[0]);
+        }
 
         printf("nb_terminator: %u\n", indiv.nb_terminator);
         printf("nb_prot_start: %u\n", indiv.nb_prot_start);

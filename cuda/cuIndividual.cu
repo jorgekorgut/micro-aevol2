@@ -152,6 +152,10 @@ __device__ void cuIndividual::clean_metadata() {
     list_gene = nullptr;
     delete[] list_protein;
     list_protein = nullptr;
+
+    // Only for print_indivs
+    terminator_idxs[0] = 0;
+    prot_start_idxs[0] = 0;
 }
 
 __device__ void cuIndividual::prepare_rnas() {
