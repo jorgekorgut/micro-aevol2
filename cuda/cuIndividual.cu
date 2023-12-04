@@ -288,7 +288,8 @@ __device__ void cuIndividual::translate_gene(uint gene_idx) const {
     auto &new_protein = list_protein[gene_idx];
 
     while (true) {
-        block codon = translate_to_codon(genome + it);
+        uint8_t codon = get_block(genome, it, 3);
+
         if (codon == CODON_STOP)
             break;
         distance += CODON_SIZE;
@@ -297,6 +298,8 @@ __device__ void cuIndividual::translate_gene(uint gene_idx) const {
             break;
         }
 
+        // TODO: rewrite add_codon instead of inverting
+        codon = ((codon & 0b001) << 2) | (codon & 0b010) | ((codon & 0b100) >> 2);
         new_protein.add_codon(codon);
         next(it);
     }
