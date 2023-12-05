@@ -260,8 +260,13 @@ convert_char_to_bitset(const char* arr, uint size, block* set)
 
 __device__
 void
-print_bitset(block* set, uint size)
+print_bitset(block* set, uint bit_size)
 {
+    uint size = std::ceil(bit_size / 64.0);
+    for (uint idx = (bit_size % 64); idx; --idx)
+        printf("%u", 1 & (set[size - 1] >> (idx - 1)));
+    --size;
+
     for (; size; --size) {
         for (uint idx = 64; idx; --idx) {
             printf("%u", 1 & (set[size - 1] >> (idx - 1)));
@@ -280,7 +285,7 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         printf("size: %u\n", indiv.size);
         printf("block_size: %u\n", indiv.block_size);
         printf("genom: ");
-        print_bitset(indiv.genome, indiv.block_size);
+        print_bitset(indiv.genome, indiv.size);
 
         printf("promoters: ");
         for (uint i = indiv.size - 1; i; --i) {
@@ -290,7 +295,7 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
 
         printf("terminators: ");
         if (!indiv.terminator_idxs[0]) {
-            print_bitset(indiv.terminators, indiv.block_size);
+            print_bitset(indiv.terminators, indiv.size);
         } else {
             for (uint i = indiv.nb_terminator - 1; i; --i) {
                 printf("%u, ", indiv.terminator_idxs[i]);
@@ -299,7 +304,7 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         }
         printf("prot_start: ");
         if (!indiv.prot_start_idxs[0]) {
-            print_bitset(indiv.prot_start, indiv.block_size);
+            print_bitset(indiv.prot_start, indiv.size);
         } else {
             for (uint i = indiv.nb_prot_start - 1; i; --i) {
                 printf("%u, ", indiv.prot_start_idxs[i]);
