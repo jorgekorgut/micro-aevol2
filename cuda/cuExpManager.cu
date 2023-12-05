@@ -141,39 +141,39 @@ void cuExpManager::evaluate_population() {
 
     clean_metadata<<<one_indiv_by_thread_grid, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("clean_metadata done\n");
+    // printf("clean_metadata done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     search_patterns<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("search_patterns done\n");
+    // printf("search_patterns done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     sparse_meta<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("sparse_meta done\n");
+    // printf("sparse_meta done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     transcription<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("transcription done\n");
+    // printf("transcription done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     find_gene_per_RNA<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("find_gene_per_RNA done\n");
+    // printf("find_gene_per_RNA done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     gather_genes<<<one_indiv_by_thread_grid, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("gather_genes done\n");
+    // printf("gather_genes done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     translation<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("translation done\n");
+    // printf("translation done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     compute_phenotype<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
-    printf("compute_phenotype done\n");
+    // printf("compute_phenotype done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     compute_fitness<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_, device_target_);
     CHECK_KERNEL;
-    printf("compute_fitness done\n");
+    // printf("compute_fitness done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
 }
 
@@ -199,9 +199,7 @@ void cuExpManager::run_evolution(int nb_gen) {
     CHECK_KERNEL
     swap(all_parent_genome_, all_child_genome_);
     check_result<<<1,1>>>(nb_indivs_, device_individuals_);
-    print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
-    return;
 
     printf("Running evolution GPU from %d to %d\n", AeTime::time(), AeTime::time() + nb_gen);
     for (int gen = 0; gen < nb_gen; gen++) {
