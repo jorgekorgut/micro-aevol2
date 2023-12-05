@@ -195,9 +195,9 @@ void cuExpManager::run_evolution(int nb_gen) {
     auto threads_per_block = 64;
     auto grid_dim_1d = ceil((float) nb_indivs_ / (float) threads_per_block);
     evaluate_population();
-    // swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
-    // CHECK_KERNEL
-    // swap(all_parent_genome_, all_child_genome_);
+    swap_parent_child_genome<<<grid_dim_1d, threads_per_block>>>(nb_indivs_, device_individuals_, all_parent_genome_);
+    CHECK_KERNEL
+    swap(all_parent_genome_, all_child_genome_);
     check_result<<<1,1>>>(nb_indivs_, device_individuals_);
     print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL
@@ -305,7 +305,7 @@ void cuExpManager::transfer_to_device() {
         checkCuda(cudaMemcpy(indiv_genome, host_individuals_[i], block_length_phantom_ * sizeof(block), cudaMemcpyHostToDevice));
     }
 
-    init_device_population<<<1, 1>>>(nb_indivs_, block_length_, block_length_ != block_length_phantom_, genome_length_, device_individuals_, all_child_genome_,
+    init_device_population<<<1, 1>>>(nb_indivs_, block_length_, block_length_phantom_, genome_length_, device_individuals_, all_child_genome_,
                                      all_promoters, all_terminators, all_terms_idxs, all_prot_start, all_prots_idxs, all_rnas);
     CHECK_KERNEL
 
@@ -386,6 +386,23 @@ void check_result(uint nb_indivs, cuIndividual* individuals) {
     printf("\n");
 }
 
+// NOTE: not thread safe
+__device__
+void
+flip_bit(block* set, uint pos)
+{
+	// TODO: do not hardcode
+	uint bid = pos >> 6;
+	uint idx = pos & 63;
+
+	uint mask = 1lu << idx;
+
+	if (set[bid] & mask)
+		set[bid] &= ~mask;
+	else
+		set[bid] |= mask;
+}
+
 __global__
 void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate, RandService* rand_service) {
     // One thread per individual
@@ -398,11 +415,10 @@ void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate
 
     for (int i = 0; i < nb_switch; ++i) {
         auto position = rand_service->gen_number_max(indiv.size, indiv_idx, MUTATION);
-        if (indiv.genome[position] == '0') indiv.genome[position] = '1';
-        else indiv.genome[position] = '0';
+        flip_bit(indiv.genome, position);
 
         if (position < PROM_SIZE) // Do not forget phantom space
-            indiv.genome[position + indiv.size] = indiv.genome[position];
+            flip_bit(indiv.genome, position + indiv.size);
 
 //        printf("indiv %u switch at %d\n", indiv_idx, position);
     }
@@ -426,14 +442,15 @@ void reproduction(uint nb_indivs, cuIndividual* individuals, const int* reproduc
     if (threadIdx.x == 0) {
         auto& child = individuals[indiv_idx];
         // size do not change, what a chance !
-        size = child.size;
-        auto offset = reproducers[indiv_idx] * (child.size + PROM_SIZE); // Do not forget phantom space
+        size = child.block_size_phantom; // Do not forget phantom space
+        auto offset = reproducers[indiv_idx] * size;
         parent_genome = all_parent_genome + offset;
         child_genome = child.genome;
     }
     __syncthreads();
 
-    for (int position = idx; position < size + PROM_SIZE; position += rr_width) { // Do not forget phantom space
+    // TODO: memcpy?
+    for (int position = idx; position < size; position += rr_width) { // Do not forget phantom space
         child_genome[position] = parent_genome[position];
     }
 }
@@ -481,7 +498,6 @@ void selection(uint grid_height, uint grid_width, const cuIndividual* individual
     next_reproducers[grid_idx] = selected_x * grid_height + selected_y;
 }
 
-// TODO
 __global__
 void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, block* all_parent_genome) {
     // One thread per individual
@@ -490,7 +506,7 @@ void swap_parent_child_genome(uint nb_indivs, cuIndividual* individuals, block* 
         return;
 
     auto& indiv = individuals[indiv_idx];
-    auto offset = indiv_idx * (indiv.size + PROM_SIZE); // Do not forget phantom space
+    auto offset = indiv_idx * indiv.block_size_phantom; // Do not forget phantom space
     indiv.genome = all_parent_genome + offset;
 }
 
@@ -605,12 +621,12 @@ void check_rng(RandService* rand_service) {
 
 __global__
 void
-init_device_population(int nb_indivs, uint block_length, bool extra_block,
-                       int genome_length, cuIndividual* all_individuals,
-                       block* all_genomes, uint8_t* all_promoters,
-                       block* all_terminators, uint* all_terms_idxs,
-                       block* all_prot_start, uint* all_prots_idxs,
-                       cuRNA* all_rnas)
+init_device_population(int nb_indivs, uint block_length,
+                       uint block_length_phantom, int genome_length,
+                       cuIndividual* all_individuals, block* all_genomes,
+                       uint8_t* all_promoters, block* all_terminators,
+                       uint* all_terms_idxs, block* all_prot_start,
+                       uint* all_prots_idxs, cuRNA* all_rnas)
 {
     auto idx = threadIdx.x + blockIdx.x * blockDim.x;
     auto rr_width = blockDim.x * gridDim.x;
@@ -619,10 +635,11 @@ init_device_population(int nb_indivs, uint block_length, bool extra_block,
         auto& local_indiv = all_individuals[i];
         local_indiv.size = genome_length;
         local_indiv.block_size = block_length;
+        local_indiv.block_size_phantom = block_length_phantom;
 
         auto offset = block_length * i;
         auto gen_offset = genome_length * i;
-        local_indiv.genome = all_genomes + offset + i * extra_block;
+        local_indiv.genome = all_genomes + block_length_phantom * i;
         local_indiv.promoters = all_promoters + gen_offset;
         local_indiv.terminators = all_terminators + offset;
         local_indiv.terminator_idxs = all_terms_idxs + gen_offset;

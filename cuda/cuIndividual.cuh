@@ -77,6 +77,7 @@ struct cuIndividual {
 
     uint size{};
     uint block_size{};
+    uint block_size_phantom{};
     block *genome{};
     uint8_t *promoters{};
     block *terminators{};
