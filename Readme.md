@@ -1,7 +1,7 @@
 # TP Micro-aevol2
 
 ## Members
-Julien PREIN 
+Julien PREIN  
 Jorge KORGUT Junior
 
 ## Project architecture
