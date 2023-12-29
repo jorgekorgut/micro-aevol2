@@ -37,7 +37,7 @@ endif ( USE_OMP )
 
 find_package(ZLIB REQUIRED)
 
-set(BOOST_ROOT /home/jlprein/docs/boost_1_83_0)
+set(BOOST_ROOT ../boost/boost_1_83_0)
 find_package(Boost 1.83.0 REQUIRED)
 include_directories("${Boost_INCLUDE_DIRS}")
 
