@@ -20,11 +20,16 @@ For being able to launch our project, you will need CUDA nvcc compiler installed
 **Cuda** : ```https://docs.nvidia.com/cuda/cuda-installation-guide-linux```  
 
 **Boost** : ```https://www.boost.org/doc/libs/1_84_0/more/getting_started```  
-Extract the files from boost following the example.  
+Extract and install the files from boost following the following folder hierarchic example. The boost folder can be found in the root of the project. 
 Ex : ```boost/boost_1_83_0```  
 
 ### Launching the project  
 
+After **[1]** cloning the repository and **[2]** submodules, **[3]** installing boost inside the /boost folder and **[4]** executing the symlink script, you are ready to change branches and start compiling the different versions of our application.
+
+As mentioned before, every branch is tagged with a prefix _**final-**_ before the optimization type used.
+
+```git checkout final-#```  
 
 
 
