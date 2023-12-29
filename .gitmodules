@@ -1,3 +1,3 @@
-[submodule "dynamic_bitset"]
-	path = dynamic_bitset
+[submodule "boost/dynamic_bitset"]
+	path = boost/dynamic_bitset
 	url = https://github.com/druckdev/dynamic_bitset
