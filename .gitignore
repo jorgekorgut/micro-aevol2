@@ -1,3 +1,7 @@
 presentation
 stats
 backup
+.idea
+*build*
+*.o
+.vscode/
