@@ -138,4 +138,21 @@ _Run time comparison of the starting version of Micro-Aevol and the one with cus
 _Micro-aevol custom dynamic bitset version run profiled with Intel VTune showing the application hot paths_  
 
 It is interesting to notice the loss of the relative time spent on the DNA sequence and the total speedup obtained using this optimization method. 
+
 ### GPU
+
+After optimization the CPU executable we switched over to the GPU. We started by
+a very naive replacement of all the `char`, `*int8_t` and `uint` arrays we could
+find to a bitset in the form of `block *` (i.e. `uint64_t`). This obviously
+broke the functionality of the program.
+
+From here on we started to also slowly port the functionality of every function
+using those arrays. This consisted mostly of adjustments in uses of indices and
+lengths in loops, but also of more complex parts like introducing specific
+atomic operations since different threads might need to access the same bytes
+because of the denser memory layout. In this step we also partially reverted
+back to `uint` arrays for the arrays holding indices (e.g. `terminator`,
+`prot_start`). At the end of this we had working code again, that would run
+approximately 1.6x faster.
+
+TODO: highlight with benchmark results
