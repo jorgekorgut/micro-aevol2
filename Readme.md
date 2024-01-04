@@ -6,13 +6,14 @@ Jorge KORGUT Junior
 
 ## Project architecture
 
-The project contains 2 majors optimizations and they can be found inside their respectives branches :
+The project contains 2 majors optimizations that can be found in the following
+branches:
 
 [ :pushpin: **final-unchanged**  ](https://github.com/jorgekorgut/micro-aevol2/tree/final-unchanged) : This branch, contains the first version without any modification. This was the starting point of our project.
 
 [ :pushpin: **final-custombitset**](https://github.com/jorgekorgut/micro-aevol2/tree/final-custombitset) : This was the first optimization implementation. The idea was to encode the DNA in a bitset, to gain performance by fastly comparing the wanted sequences.
 
-[ :pushpin: **final-cuda**](https://github.com/jorgekorgut/micro-aevol2/tree/final-cuda) : After gaining performance with bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
+[ :pushpin: **master**](https://github.com/jorgekorgut/micro-aevol2/tree/final-cuda) : After gaining performance with the bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
 
 ### Dependencies
 
