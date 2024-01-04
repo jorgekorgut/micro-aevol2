@@ -42,7 +42,8 @@ export LD_LIBRARY_PATH=/usr/local/cuda-12.3/lib64${LD_LIBRARY_PATH:+:${LD_LIBRAR
 
 ### Launching the project  
 
-After **[1]** cloning the repository and **[2]** submodules, **[3]** installing boost inside the /boost folder and **[4]** executing the symlink script, you are ready to change branches and start compiling the different versions of our application.
+After cloning the repository execute `bootstrap.sh` to install and setup our
+boost fork dependency.
 
 As mentioned before, every branch is tagged with a prefix _**final-**_ before the optimization type used. Therefore, for launching the project with a specific optimization, change branches to the wished one.
 
