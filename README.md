@@ -13,7 +13,7 @@ branches:
 
 [ :pushpin: **final-custombitset**](https://github.com/jorgekorgut/micro-aevol2/tree/final-custombitset) : This was the first optimization implementation. The idea was to encode the DNA in a bitset, to gain performance by fastly comparing the wanted sequences.
 
-[ :pushpin: **master**](https://github.com/jorgekorgut/micro-aevol2/tree/final-cuda) : After gaining performance with the bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
+[ :pushpin: **master**](https://github.com/jorgekorgut/micro-aevol2/) : After gaining performance with the bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
 
 ### Dependencies
 
