@@ -394,7 +394,7 @@ flip_bit(block* set, uint pos)
 	uint bid = pos / 64;
 	uint idx = pos % 64;
 
-	uint mask = 1lu << idx;
+	uint mask = 1llu << idx;
 
 	if (set[bid] & mask)
 		set[bid] &= ~mask;
