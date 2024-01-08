@@ -145,11 +145,25 @@ set_bit_to(block* bitset, uint pos, bool value)
     uint idx = pos & (blockSizeBites - 1);
 
     if (value)
-        // bitset[bidx] |= (1ull << idx);
         atomicOr(bitset + bidx, 1llu << idx);
     else
-        // bitset[bidx] &= ~(1ull << idx);
         atomicAnd(bitset + bidx, ~(1llu << idx));
+
+    return value;
+}
+
+__device__
+const bool
+set_bit_to_unsafe(block* bitset, uint pos, bool value)
+{
+    // TODO: use a shift
+    uint bidx = pos / blockSizeBites;
+    uint idx = pos & (blockSizeBites - 1);
+
+    if (value)
+        bitset[bidx] |= (1ull << idx);
+    else
+        bitset[bidx] &= ~(1ull << idx);
 
     return value;
 }
@@ -157,6 +171,17 @@ set_bit_to(block* bitset, uint pos, bool value)
 __device__
 inline void
 set_bit(block* bitset, uint pos)
+{
+    // TODO: use a shift
+    uint bidx = pos / blockSizeBites;
+    uint idx = pos & (blockSizeBites - 1);
+
+	atomicOr(bitset + bidx, 1llu << idx);
+}
+
+__device__
+inline void
+set_bit_unsafe(block* bitset, uint pos)
 {
     // TODO: use a shift
     uint bidx = pos / blockSizeBites;

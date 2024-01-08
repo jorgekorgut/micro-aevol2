@@ -74,7 +74,9 @@ __device__ uint64_t atomicOr(uint64_t* address, uint64_t val);
 __device__ uint64_t atomicAnd(uint64_t* address, uint64_t val);
 
 __device__ const bool set_bit_to(block* bitset, uint pos, bool value);
+__device__ const bool set_bit_to_unsafe(block* bitset, uint pos, bool value);
 __device__ inline void set_bit(block* bitset, uint pos);
+__device__ inline void set_bit_unsafe(block* bitset, uint pos);
 
 __device__ const block get_block_circ(block* genome, uint size, uint bit_index, uint length);
 __device__ const block get_block(block* genome, uint pos, uint len);
