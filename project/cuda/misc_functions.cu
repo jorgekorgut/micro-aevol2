@@ -353,7 +353,7 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
         printf("%u\n", indiv.promoters[0]);
 
         printf("terminators: ");
-        if (!indiv.terminator_idxs[0]) {
+        if (!indiv.nb_terminator) {
             print_bitset(indiv.terminators, indiv.size);
         } else {
             for (uint i = indiv.nb_terminator - 1; i; --i) {
@@ -362,7 +362,7 @@ print_indivs(uint nb_indivs, cuIndividual* indivs)
             printf("%u\n", indiv.terminator_idxs[0]);
         }
         printf("prot_start: ");
-        if (!indiv.prot_start_idxs[0]) {
+        if (!indiv.nb_prot_start) {
             print_bitset(indiv.prot_start, indiv.size);
         } else {
             for (uint i = indiv.nb_prot_start - 1; i; --i) {
