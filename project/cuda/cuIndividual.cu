@@ -92,13 +92,15 @@ __device__ void cuIndividual::sparse_meta() {
         prepare_rnas();
     }
     if (idx == 1) {
-        assert(nb_terminator == sparse_bitset(terminators, block_size, terminator_idxs));
+        uint num_sparsed = sparse_bitset(terminators, block_size, terminator_idxs);
+        assert(nb_terminator == num_sparsed);
         // TODO: is this needed?
         if (nb_terminator < size)
             terminator_idxs[nb_terminator] = 0;
     }
     if (idx == 2) {
-        assert(nb_prot_start == sparse_bitset(prot_start, block_size, prot_start_idxs));
+        uint num_sparsed = sparse_bitset(prot_start, block_size, prot_start_idxs);
+        assert(nb_prot_start == num_sparsed);
         if (nb_prot_start < size)
             prot_start_idxs[nb_prot_start] = 0;
     }
