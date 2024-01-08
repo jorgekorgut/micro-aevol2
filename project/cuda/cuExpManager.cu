@@ -390,8 +390,10 @@ void
 flip_bit(block* set, uint pos)
 {
 	// TODO: do not hardcode
-	uint bid = pos >> 6;
-	uint idx = pos & 63;
+	// uint bid = pos >> 6;
+	// uint idx = pos & 63;
+	uint bid = pos / 64;
+	uint idx = pos % 64;
 
 	uint mask = 1lu << idx;
 

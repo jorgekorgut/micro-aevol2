@@ -140,9 +140,9 @@ __device__
 const bool
 set_bit_to(block* bitset, uint pos, bool value)
 {
-    // TODO: use a shift
+    // TODO: use a shift and & - 1
     uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
+    uint idx = pos % blockSizeBites;
 
     if (value)
         atomicOr(bitset + bidx, 1llu << idx);
@@ -156,9 +156,9 @@ __device__
 const bool
 set_bit_to_unsafe(block* bitset, uint pos, bool value)
 {
-    // TODO: use a shift
+    // TODO: use a shift and & - 1
     uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
+    uint idx = pos % blockSizeBites;
 
     if (value)
         bitset[bidx] |= (1ull << idx);
@@ -172,9 +172,9 @@ __device__
 inline void
 set_bit(block* bitset, uint pos)
 {
-    // TODO: use a shift
+    // TODO: use a shift and & - 1
     uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
+    uint idx = pos % blockSizeBites;
 
 	atomicOr(bitset + bidx, 1llu << idx);
 }
@@ -183,9 +183,9 @@ __device__
 inline void
 set_bit_unsafe(block* bitset, uint pos)
 {
-    // TODO: use a shift
+    // TODO: use a shift and & - 1
     uint bidx = pos / blockSizeBites;
-    uint idx = pos & (blockSizeBites - 1);
+    uint idx = pos % blockSizeBites;
 
     bitset[bidx] |= (1llu << idx);
 }
@@ -247,9 +247,9 @@ __device__
 const block
 get_block(block* genome, uint pos, uint len)
 {
-	// pos >> 6
+	// TODO: use a shift and & - 1
 	uint bidx = pos / blockSizeBites;
-	uint pos_idx = pos & (blockSizeBites - 1);
+	uint pos_idx = pos % blockSizeBites;
 
 	block value = (genome[bidx] >> pos_idx) & ((1llu << len) - 1);
 
