@@ -191,6 +191,40 @@ set_bit_unsafe(block* bitset, uint pos)
 }
 
 __device__
+void
+flip_bit(block* set, uint pos)
+{
+	// TODO: do not hardcode
+	// TODO: use a shift and & - 1
+	uint bid = pos / 64;
+	uint idx = pos % 64;
+
+	uint mask = 1llu << idx;
+
+	if (set[bid] & mask)
+		atomicAnd(set + bid, ~mask);
+	else
+		atomicOr(set + bid, mask);
+}
+
+__device__
+void
+flip_bit_unsafe(block* set, uint pos)
+{
+	// TODO: do not hardcode
+	// TODO: use a shift and & - 1
+	uint bid = pos / 64;
+	uint idx = pos % 64;
+
+	uint mask = 1llu << idx;
+
+	if (set[bid] & mask)
+		set[bid] &= ~mask;
+	else
+		set[bid] |= mask;
+}
+
+__device__
 const
 block get_block_circ(block* genome, uint size, uint bit_index, uint length)
 {

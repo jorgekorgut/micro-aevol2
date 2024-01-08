@@ -383,25 +383,6 @@ void check_result(uint nb_indivs, cuIndividual* individuals) {
     printf("\n");
 }
 
-// NOTE: not thread safe
-__device__
-void
-flip_bit(block* set, uint pos)
-{
-	// TODO: do not hardcode
-	// uint bid = pos >> 6;
-	// uint idx = pos & 63;
-	uint bid = pos / 64;
-	uint idx = pos % 64;
-
-	uint mask = 1llu << idx;
-
-	if (set[bid] & mask)
-		set[bid] &= ~mask;
-	else
-		set[bid] |= mask;
-}
-
 __global__
 void do_mutation(uint nb_indivs, cuIndividual* individuals, double mutation_rate, RandService* rand_service) {
     // One thread per individual
