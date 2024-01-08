@@ -41,46 +41,6 @@ __device__ bool is_prot_start(const block sequence) {
   return true;
 }
 
-// TODO
-__device__ uint8_t translate_to_codon(const block* seq) {
-  uint8_t codon = 0;
-
-  for (uint8_t i = 0; i < CODON_SIZE; ++i) {
-    // codon += seq[i] << (CODON_SIZE - 1 - i);
-    codon += seq[i] << i;
-  }
-
-  return codon;
-}
-
-__device__
-inline int
-fast_mod(const int input, const int ceil)
-{
-	// TODO: Use (& (ceil - 1)) for powers of 2
-    // apply the modulo operator only when needed
-    // (i.e. when the input is greater than the ceiling)
-    return input >= ceil ? input % ceil : input;
-    // NB: the assumption here is that the numbers are positive
-}
-
-__device__
-uint
-count_bitset(block* set, uint size)
-{
-  uint num = 0;
-  uint i;
-  uint mod = size & 63;
-
-  // TODO: do not hardcode 64
-  for (i = 0; i < size / 64; ++i)
-    num += __popc(set[i]);
-  if (mod)
-    num += __popc(set[i] & ((1llu << mod) - 1));
-
-  return num;
-}
-
 __device__
 uint
 sparse_bitset(block* set, uint size, uint* idcs)
@@ -190,58 +150,6 @@ set_bit_unsafe(block* bitset, uint pos)
     bitset[bidx] |= (1llu << idx);
 }
 
-__device__
-const
-block get_block_circ(block* genome, uint size, uint bit_index, uint length)
-{
-
-  if(bit_index >= size){
-      bit_index -= size;
-  }
-
-  block value = 0;
-  int blockIndex = bit_index / blockSizeBites;
-  int bitIndex = fast_mod(bit_index, blockSizeBites);
-
-  // If the mask is truncated by blocks or end of bitset
-  if (bitIndex + length >= blockSizeBites || bit_index + length >= size)
-  {
-      int nextBlockIndex = blockIndex + 1;
-      // uint blockCount = std::ceil(size / (float)blockSizeBites);
-      // uint blockCount = size / blockSizeBites + !!(fast_mod(size, blockSizeBites));
-      uint blockCount = size / blockSizeBites + !!(size & (blockSizeBites - 1));
-
-      if (nextBlockIndex > blockCount - 1)
-      {
-          nextBlockIndex = 0;
-      }
-
-      block leftMask = 1;
-      leftMask <<= length;
-      leftMask -= 1;
-
-      value = genome[blockIndex] >> bitIndex | genome[nextBlockIndex] << (blockSizeBites - bitIndex);
-
-      if (bit_index + length >= size)
-      {
-          int lastBlockRealSize = fast_mod(size, blockSizeBites);
-          value |= genome[nextBlockIndex] << (blockSizeBites - bitIndex) + lastBlockRealSize;
-      }
-
-      value = value & leftMask;
-  }
-  else
-  {
-      block rightMask = 1;
-      rightMask <<= bitIndex + length;
-      rightMask -= 1;
-
-      value = (genome[blockIndex] & rightMask) >> bitIndex;
-  }
-
-  return value;
-}
-
 // No safety checks.
 __device__
 const block
@@ -259,28 +167,6 @@ get_block(block* genome, uint pos, uint len)
 	}
 
 	return value;
-}
-
-__device__
-void
-convert_char_to_bitset(const char* arr, uint size, block* set)
-{
-    // TODO: do not hardcode 64
-    block new_block;
-    uint i, bid;
-
-    for (i = bid = 0; i < (size & ~63); i += 64, ++bid) {
-        new_block = 0;
-        for (uint j = 0; j < 64; ++j)
-            new_block |= (arr[i + j] - '0') << j;
-
-        set[bid] = new_block;
-    }
-
-    new_block = 0;
-    for (uint j = 0; i < size; ++i, ++j)
-        new_block |= (arr[i] - '0') << j;
-    set[bid] = new_block;
 }
 
 __device__
