@@ -255,9 +255,8 @@ void cuExpManager::save(int t) const {
     transfer_to_host();
 
     for (int indiv_id = 0; indiv_id < nb_indivs_; indiv_id++) {
-        // TODO
-        gzwrite(exp_backup_file, &genome_length_, sizeof(genome_length_));
-        gzwrite(exp_backup_file, host_individuals_[indiv_id], block_length_ * sizeof(**host_individuals_));
+        gzwrite(exp_backup_file, &block_length_phantom_, sizeof(block_length_phantom_));
+        gzwrite(exp_backup_file, host_individuals_[indiv_id], block_length_phantom_ * sizeof(**host_individuals_));
     }
 
     gzwrite(exp_backup_file, &seed_, sizeof(seed_));
