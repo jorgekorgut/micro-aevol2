@@ -344,7 +344,7 @@ void cuExpManager::transfer_to_host() const {
 }
 
 void cuExpManager::device_data_destructor() {
-    clean_population_metadata<<<1, 1>>>(nb_indivs_, device_individuals_);
+    clean_population_metadata<<<ceil((float)nb_indivs_ / 32.0), 32>>>(nb_indivs_, device_individuals_);
     RandService tmp_rand;
     checkCuda(cudaMemcpy(&tmp_rand, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
     checkCuda(cudaFree(tmp_rand.rng_counters));
@@ -568,10 +568,10 @@ __global__ void compute_fitness(uint size, cuIndividual* individuals, const doub
 // Interface Host | Device
 
 __global__ void clean_population_metadata(uint nb_indivs, cuIndividual* individuals) {
-    if (threadIdx.x + blockIdx.x == 0) {
-        for (int i = 0; i < nb_indivs; ++i) {
-            individuals[i].clean_metadata();
-        }
+    // On thread per individual
+    auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
+    if (indiv_idx < nb_indivs) {
+        individuals[indiv_idx].clean_metadata();
     }
 }
 
