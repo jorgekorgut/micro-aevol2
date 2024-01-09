@@ -155,4 +155,10 @@ back to `uint` arrays for the arrays holding indices (e.g. `terminator`,
 `prot_start`). At the end of this we had working code again, that would run
 approximately 1.6x faster.
 
-TODO: highlight with benchmark results
+#### TODO
+
+- highlight with benchmark results
+- mention clean_population_metadata
+- use nvprof output to compare functions
+- use atomicAdd to parallelize sparse_*
+
