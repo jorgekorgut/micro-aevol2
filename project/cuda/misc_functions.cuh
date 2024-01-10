@@ -87,6 +87,8 @@ __device__ void convert_char_to_bitset(const char* arr, uint size, block* set);
 __device__ void print_bitset(block* set, uint size);
 __global__ void print_indivs(uint nb_indivs, cuIndividual* indivs);
 
+__device__ void insert_sort(uint* arr, uint size);
+
 // circular forward distance
 inline __device__ uint get_distance(uint a, uint b, uint size){
   if (a > b)

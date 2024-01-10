@@ -82,6 +82,9 @@ __device__ void cuIndividual::search_patterns() {
         nb_terminator = nb_terms;
         nb_prot_start = nb_prots;
 
+        insert_sort(terminator_idxs, nb_terminator);
+        insert_sort(prot_start_idxs, nb_prot_start);
+
         if (nb_terminator < size)
             terminator_idxs[nb_terminator] = 0;
         if (nb_prot_start < size)
