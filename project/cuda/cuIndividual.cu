@@ -85,22 +85,59 @@ __device__ void cuIndividual::search_patterns() {
 
 
 __device__ void cuIndividual::sparse_meta() {
+    __shared__ uint insert_idx;
+
     // One block per individual
     uint idx = threadIdx.x;
+    uint rr_width = blockDim.x;
+
+    if (!idx) {
+        insert_idx = 0;
+    }
+    __syncthreads();
 
     if (idx == 0) {
         prepare_rnas();
     }
-    if (idx == 1) {
-        uint num_sparsed = sparse_bitset(terminators, block_size, terminator_idxs);
-        assert(nb_terminator == num_sparsed);
+
+    for (uint i = idx; i < block_size; i += rr_width) {
+        auto val = terminators[i];
+
+        block bitmask = 1;
+        for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
+            if (val & bitmask) {
+                uint ins = atomicAdd(&insert_idx, 1);
+                terminator_idxs[ins] = i * 64 + j;
+            }
+        }
+    }
+
+    __syncthreads();
+    if (!idx) {
+        assert(nb_terminator == insert_idx);
+        insert_idx = 0;
         // TODO: is this needed?
         if (nb_terminator < size)
             terminator_idxs[nb_terminator] = 0;
     }
-    if (idx == 2) {
-        uint num_sparsed = sparse_bitset(prot_start, block_size, prot_start_idxs);
-        assert(nb_prot_start == num_sparsed);
+    __syncthreads();
+
+    for (uint i = idx; i < block_size; i += rr_width) {
+        auto val = prot_start[i];
+
+        block bitmask = 1;
+        for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
+            if (val & bitmask) {
+                uint ins = atomicAdd(&insert_idx, 1);
+                prot_start_idxs[ins] = i * 64 + j;
+            }
+        }
+    }
+
+    __syncthreads();
+    if (!idx) {
+        assert(nb_prot_start == insert_idx);
+        insert_idx = 0;
         if (nb_prot_start < size)
             prot_start_idxs[nb_prot_start] = 0;
     }
