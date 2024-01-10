@@ -44,12 +44,14 @@ __device__ void cuIndividual::search_patterns() {
 
             if (term) {
                 new_term |= 1llu << i;
-                atomicAdd(&nb_terms, 1);
+                uint ins = atomicAdd(&nb_terms, 1);
+                terminator_idxs[ins] = position;
             }
 
             if (prot) {
                 new_prot |= 1llu << i;
-                atomicAdd(&nb_prots, 1);
+                uint ins = atomicAdd(&nb_prots, 1);
+                prot_start_idxs[ins] = position;
             }
 
             curr >>= 1;
@@ -79,67 +81,23 @@ __device__ void cuIndividual::search_patterns() {
     if (!idx) {
         nb_terminator = nb_terms;
         nb_prot_start = nb_prots;
-        // TODO: dynamically allocate terminator_idxs?
+
+        if (nb_terminator < size)
+            terminator_idxs[nb_terminator] = 0;
+        if (nb_prot_start < size)
+            prot_start_idxs[nb_prot_start] = 0;
     }
 }
 
 
 __device__ void cuIndividual::sparse_meta() {
-    __shared__ uint insert_idx;
-
+    // TODO: change to one thread per individual
     // One block per individual
     uint idx = threadIdx.x;
     uint rr_width = blockDim.x;
 
-    if (!idx) {
-        insert_idx = 0;
-    }
-    __syncthreads();
-
     if (idx == 0) {
         prepare_rnas();
-    }
-
-    for (uint i = idx; i < block_size; i += rr_width) {
-        auto val = terminators[i];
-
-        block bitmask = 1;
-        for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
-            if (val & bitmask) {
-                uint ins = atomicAdd(&insert_idx, 1);
-                terminator_idxs[ins] = i * 64 + j;
-            }
-        }
-    }
-
-    __syncthreads();
-    if (!idx) {
-        assert(nb_terminator == insert_idx);
-        insert_idx = 0;
-        // TODO: is this needed?
-        if (nb_terminator < size)
-            terminator_idxs[nb_terminator] = 0;
-    }
-    __syncthreads();
-
-    for (uint i = idx; i < block_size; i += rr_width) {
-        auto val = prot_start[i];
-
-        block bitmask = 1;
-        for (uint j = 0; j < 64; ++j, bitmask <<= 1) {
-            if (val & bitmask) {
-                uint ins = atomicAdd(&insert_idx, 1);
-                prot_start_idxs[ins] = i * 64 + j;
-            }
-        }
-    }
-
-    __syncthreads();
-    if (!idx) {
-        assert(nb_prot_start == insert_idx);
-        insert_idx = 0;
-        if (nb_prot_start < size)
-            prot_start_idxs[nb_prot_start] = 0;
     }
 }
 
