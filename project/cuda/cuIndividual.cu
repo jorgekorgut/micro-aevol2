@@ -248,27 +248,40 @@ __device__ void cuIndividual::prepare_gene(uint rna_idx) const {
 }
 
 __device__ void cuIndividual::gather_genes() {
-    // One thread working alone
-    nb_gene = 0;
-    for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
-        nb_gene += list_rnas[idx_rna].nb_gene;
+    __shared__ uint insert_idx;
+
+    // One block per individual
+    uint idx = threadIdx.x;
+    uint rr_width = blockDim.x;
+
+    if (!idx) {
+        nb_gene = 0;
+        insert_idx = 0;
     }
-    if (nb_gene > 0) {
+    __syncthreads();
+
+    for (uint idx_rna = idx; idx_rna < nb_rnas; idx_rna += rr_width) {
+        atomicAdd(&nb_gene, list_rnas[idx_rna].nb_gene);
+    }
+
+    __syncthreads();
+    if (!idx && nb_gene > 0) {
         list_gene = new cuGene[nb_gene]{};
         list_protein = new cuProtein[nb_gene]{};
         assert(list_gene != nullptr);
         assert(list_protein != nullptr);
     }
-    uint insert_idx = 0;
+    __syncthreads();
 
-    for (int idx_rna = 0; idx_rna < nb_rnas; ++idx_rna) {
+    // TODO: unroll the loops for better performance?
+    for (uint idx_rna = idx; idx_rna < nb_rnas; idx_rna += rr_width) {
         const auto &rna = list_rnas[idx_rna];
-        for (int i = 0; i < rna.nb_gene; ++i) {
+        for (uint i = 0; i < rna.nb_gene; ++i) {
             assert(insert_idx < nb_gene);
-            list_gene[insert_idx] = rna.list_gene[i];
+            uint ins = atomicAdd(&insert_idx, 1);
+            list_gene[ins] = rna.list_gene[i];
             // limit is difference between transcription_length and distance start_rna -> start_gen (computed in `prepare_gene`)
-            list_gene[insert_idx].length_limit = rna.transcription_length - list_gene[insert_idx].length_limit;
-            insert_idx++;
+            list_gene[ins].length_limit = rna.transcription_length - list_gene[insert_idx].length_limit;
         }
     }
 }

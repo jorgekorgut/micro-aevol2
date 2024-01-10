@@ -159,7 +159,7 @@ void cuExpManager::evaluate_population() {
     CHECK_KERNEL;
     // printf("find_gene_per_RNA done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
-    gather_genes<<<one_indiv_by_thread_grid, my_blockDim>>>(nb_indivs_, device_individuals_);
+    gather_genes<<<my_gridDim, my_blockDim>>>(nb_indivs_, device_individuals_);
     CHECK_KERNEL;
     // printf("gather_genes done\n");
     // print_indivs<<<1,1>>>(nb_indivs_, device_individuals_);
@@ -536,12 +536,10 @@ void find_gene_per_RNA(uint nb_indivs, cuIndividual* individuals) {
 
 __global__
 void gather_genes(uint nb_indivs, cuIndividual* individuals) {
-    // One thread per individual
-    auto idx = threadIdx.x + blockIdx.x * blockDim.x;
-    auto stride = blockDim.x * gridDim.x;
-
-    for (int i = idx; i < nb_indivs; i += stride)
-        individuals[i].gather_genes();
+    // One block per individual
+    auto indiv_idx = blockIdx.x;
+    if (indiv_idx < nb_indivs)
+        individuals[indiv_idx].gather_genes();
 }
 
 __global__ void translation(uint size, cuIndividual* individuals) {
