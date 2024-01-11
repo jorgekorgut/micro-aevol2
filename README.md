@@ -9,11 +9,11 @@ Jorge KORGUT Junior
 The project contains 2 majors optimizations that can be found in the following
 branches:
 
-[ :pushpin: **final-unchanged**  ](https://github.com/jorgekorgut/micro-aevol2/tree/final-unchanged) : This branch, contains the first version without any modification. This was the starting point of our project.
+[ :pushpin: **final-unchanged**  ](../../tree/final-unchanged) : This branch, contains the first version without any modification. This was the starting point of our project.
 
-[ :pushpin: **final-custombitset**](https://github.com/jorgekorgut/micro-aevol2/tree/final-custombitset) : This was the first optimization implementation. The idea was to encode the DNA in a bitset, to gain performance by fastly comparing the wanted sequences.
+[ :pushpin: **final-custombitset**](../../tree/final-custombitset) : This was the first optimization implementation. The idea was to encode the DNA in a bitset, to gain performance by fastly comparing the wanted sequences.
 
-[ :pushpin: **master**](https://github.com/jorgekorgut/micro-aevol2/) : After gaining performance with the bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
+[ :pushpin: **master**](../../tree/master) : After gaining performance with the bitset, the main goal of this step was to convert all the particularities from bitset to the GPU. The propretary language CUDA was used.
 
 ### Dependencies
 
@@ -183,8 +183,8 @@ index d55343c24c74..8efb394019db 100644
 ```
 
 The benchmarked commit can be found on the
-[tree/dev-master-cuda](dev-master-cuda) branch. This commit would run in our
-tests for 28 seconds and our bitset version for 17.2 seconds.
+[dev-master-cuda](../../tree/dev-master-cuda) branch. This commit would run in
+our tests for 28 seconds and our bitset version for 17.2 seconds.
 
 After this we profiled our code with nvprof and got following results:
 
@@ -318,6 +318,6 @@ work with `search_patterns`. The problem here was that the order of the
 resulting lists `terminator_idxs` and `prot_start_idxs` would be different (i.e.
 non-deterministic) which changed the end-result. Additionally we couldn't gain
 any runtime through our approach. Our implementation can be found on the
-[tree/further](further) branch. We believe that with more time one could bring
+[further](../../tree/further) branch. We believe that with more time one could bring
 those two functions together and increase the GPU performance even further.
 
