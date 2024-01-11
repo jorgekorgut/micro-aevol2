@@ -152,13 +152,172 @@ lengths in loops, but also of more complex parts like introducing specific
 atomic operations since different threads might need to access the same bytes
 because of the denser memory layout. In this step we also partially reverted
 back to `uint` arrays for the arrays holding indices (e.g. `terminator`,
-`prot_start`). At the end of this we had working code again, that would run
-approximately 1.6x faster.
+`prot_start`). At the end of this we had working code again.
 
-#### TODO
+When comparing the performance we first benchmarked the state of the program
+when we got it. For this we just turned on cuda support and increased the C++
+version to 20.
 
-- highlight with benchmark results
-- mention clean_population_metadata
-- use nvprof output to compare functions
-- use atomicAdd to parallelize sparse_*
+```patch
+$ git diff origin/dev-master-cuda 80ed9301ddd0 -- CMakeLists.txt
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d55343c24c74..8efb394019db 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,13 +1,11 @@
+ cmake_minimum_required(VERSION 3.13)
+ project(pdc_mini_aevol)
+
+-set(CMAKE_CXX_STANDARD 20)
+-set(CMAKE_BUILD_TYPE Release)
+-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
++set(CMAKE_CXX_STANDARD 14)
+
+ set(DO_TRACES OFF CACHE BOOL "Whether to enable the Traces library")
+ set(USE_OMP OFF CACHE BOOL "Whether to enable OpenMP parallelization")
+-set(USE_CUDA ON CACHE BOOL "Whether to enable CUDA parallelization")
++set(USE_CUDA OFF CACHE BOOL "Whether to enable CUDA parallelization")
+
+ if ( DO_TRACES )
+     add_definitions(-DTRACES)
+```
+
+The benchmarked commit can be found on the
+[tree/dev-master-cuda](dev-master-cuda) branch. This commit would run in our
+tests for 28 seconds and our bitset version for 17.2 seconds.
+
+After this we profiled our code with nvprof and got following results:
+
+```
+==10520== NVPROF is profiling process 10520, command: ./micro_aevol_gpu
+==10520== Profiling application: ./micro_aevol_gpu
+==10520== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   51.09%  8.72178s      1001  8.7131ms  8.5950ms  13.767ms  sparse_meta(unsigned int, cuIndividual*)
+                   13.63%  2.32774s         1  2.32774s  2.32774s  2.32774s  clean_population_metadata(unsigned int, cuIndividual*)
+                   12.71%  2.17036s      1001  2.1682ms  2.1056ms  3.4977ms  gather_genes(unsigned int, cuIndividual*)
+                    8.07%  1.37777s      1001  1.3764ms  1.3479ms  2.3350ms  search_patterns(unsigned int, cuIndividual*)
+                    6.86%  1.17070s      1001  1.1695ms  28.512us  2.0323ms  clean_metadata(unsigned int, cuIndividual*)
+                    3.46%  590.94ms      1001  590.35us  571.59us  877.67us  find_gene_per_RNA(unsigned int, cuIndividual*)
+                    1.73%  294.78ms      1001  294.49us  290.37us  482.63us  compute_fitness(unsigned int, cuIndividual*, double const *)
+                    1.26%  214.40ms      1001  214.18us  208.61us  356.20us  compute_phenotype(unsigned int, cuIndividual*)
+                    0.47%  80.508ms         2  40.254ms  31.915ms  48.593ms  check_result(unsigned int, cuIndividual*)
+                    0.31%  52.315ms      1001  52.263us  50.464us  82.561us  translation(unsigned int, cuIndividual*)
+                    0.18%  30.995ms      1001  30.964us  29.600us  41.632us  transcription(unsigned int, cuIndividual*)
+                    0.08%  13.131ms      1000  13.130us  12.576us  19.968us  selection(unsigned int, unsigned int, cuIndividual const *, RandService*, int*)
+                    0.06%  11.020ms      1000  11.020us  10.464us  16.160us  reproduction(unsigned int, cuIndividual*, int const *, unsigned long const *)
+                    0.06%  9.5282ms      1000  9.5280us  8.2880us  17.088us  do_mutation(unsigned int, cuIndividual*, double, RandService*)
+                    0.01%  2.4967ms         1  2.4967ms  2.4967ms  2.4967ms  init_device_population(int, unsigned int, unsigned int, int, cuIndividual*, unsigned long*, unsigned char*, unsigned long*, unsigned int*, unsigned long*, unsigned int*, cuRNA*)
+                    0.01%  2.4171ms      1001  2.4140us  2.2400us  12.192us  swap_parent_child_genome(unsigned int, cuIndividual*, unsigned long*)
+                    0.01%  1.5842ms      1028  1.5410us  1.2800us  3.2640us  [CUDA memcpy DtoH]
+                    0.00%  425.78us      1027     414ns     320ns  2.4000us  [CUDA memcpy HtoD]
+      API calls:   85.72%  14.7989s     13013  1.1372ms  5.2830us  48.925ms  cudaDeviceSynchronize
+                   13.58%  2.34485s      2055  1.1410ms  3.4150us  2.32776s  cudaMemcpy
+                    0.31%  53.503ms         1  53.503ms  53.503ms  53.503ms  cudaDeviceSetLimit
+                    0.23%  39.463ms     13014  3.0320us  2.0730us  7.5902ms  cudaLaunchKernel
+                    0.11%  19.057ms         1  19.057ms  19.057ms  19.057ms  cudaDeviceReset
+                    0.03%  4.9337ms        13  379.51us  1.6610us  3.2099ms  cudaFree
+                    0.01%  1.7501ms     13013     134ns      85ns  300.55us  cudaGetLastError
+                    0.00%  668.90us        13  51.454us  1.7030us  160.60us  cudaMalloc
+                    0.00%  203.28us       114  1.7830us     207ns  79.210us  cuDeviceGetAttribute
+                    0.00%  17.983us         1  17.983us  17.983us  17.983us  cuDeviceGetName
+                    0.00%  11.497us         1  11.497us  11.497us  11.497us  cuDeviceGetPCIBusId
+                    0.00%  2.1560us         3     718ns     329ns  1.4750us  cuDeviceGetCount
+                    0.00%  1.1050us         2     552ns     224ns     881ns  cuDeviceGet
+                    0.00%     532ns         1     532ns     532ns     532ns  cuDeviceTotalMem
+                    0.00%     411ns         1     411ns     411ns     411ns  cuModuleGetLoadingMode
+                    0.00%     360ns         1     360ns     360ns     360ns  cuDeviceGetUuid
+```
+
+As a next step we parallelized `clean_population_metadata` with a very simple
+patch to use a thread per individual instead of just one thread doing
+everything:
+
+```
+diff --git a/project/cuda/cuExpManager.cu b/project/cuda/cuExpManager.cu
+index 110ea097d75f..95f4fcffb0e5 100644
+--- a/project/cuda/cuExpManager.cu
++++ b/project/cuda/cuExpManager.cu
+@@ -344,7 +344,7 @@ void cuExpManager::transfer_to_host() const {
+ }
+ 
+ void cuExpManager::device_data_destructor() {
+-    clean_population_metadata<<<1, 1>>>(nb_indivs_, device_individuals_);
++    clean_population_metadata<<<ceil((float)nb_indivs_ / 32.0), 32>>>(nb_indivs_, device_individuals_);
+     RandService tmp_rand;
+     checkCuda(cudaMemcpy(&tmp_rand, rand_service_, sizeof(RandService), cudaMemcpyDeviceToHost));
+     checkCuda(cudaFree(tmp_rand.rng_counters));
+@@ -568,10 +568,10 @@ __global__ void compute_fitness(uint size, cuIndividual* individuals, const doub
+ // Interface Host | Device
+ 
+ __global__ void clean_population_metadata(uint nb_indivs, cuIndividual* individuals) {
+-    if (threadIdx.x + blockIdx.x == 0) {
+-        for (int i = 0; i < nb_indivs; ++i) {
+-            individuals[i].clean_metadata();
+-        }
++    // On thread per individual
++    auto indiv_idx = threadIdx.x + blockIdx.x * blockDim.x;
++    if (indiv_idx < nb_indivs) {
++        individuals[indiv_idx].clean_metadata();
+     }
+ }
+```
+
+With this we gained over 2 seconds with a final runtime of 14.9 seconds. Thus we
+achieved a speedup of almost 1.9x.
+
+#### What now?
+
+When looking at the output of nvprof one can clearly see that the majority of
+the runtime is spent in `sparse_meta`:
+
+```
+==10694== NVPROF is profiling process 10694, command: ./micro_aevol_gpu
+==10694== Profiling application: ./micro_aevol_gpu
+==10694== Profiling result:
+            Type  Time(%)      Time     Calls       Avg       Min       Max  Name
+ GPU activities:   59.15%  8.70406s      1001  8.6954ms  8.5703ms  13.858ms  sparse_meta(unsigned int, cuIndividual*)
+                   14.72%  2.16590s      1001  2.1637ms  2.0989ms  3.4946ms  gather_genes(unsigned int, cuIndividual*)
+                    9.32%  1.37108s      1001  1.3697ms  1.3398ms  2.3108ms  search_patterns(unsigned int, cuIndividual*)
+                    7.96%  1.17136s      1001  1.1702ms  28.513us  1.9597ms  clean_metadata(unsigned int, cuIndividual*)
+                    4.01%  589.85ms      1001  589.26us  572.04us  886.05us  find_gene_per_RNA(unsigned int, cuIndividual*)
+                    2.00%  294.39ms      1001  294.10us  289.73us  484.13us  compute_fitness(unsigned int, cuIndividual*, double const *)
+                    1.45%  213.97ms      1001  213.76us  208.13us  357.86us  compute_phenotype(unsigned int, cuIndividual*)
+                    0.55%  80.416ms         2  40.208ms  31.854ms  48.562ms  check_result(unsigned int, cuIndividual*)
+                    0.35%  52.030ms      1001  51.978us  50.113us  82.817us  translation(unsigned int, cuIndividual*)
+                    0.21%  30.956ms      1001  30.925us  29.664us  41.728us  transcription(unsigned int, cuIndividual*)
+                    0.09%  12.962ms      1000  12.961us  12.352us  20.191us  selection(unsigned int, unsigned int, cuIndividual const *, RandService*, int*)
+                    0.08%  11.050ms      1000  11.049us  10.528us  16.352us  reproduction(unsigned int, cuIndividual*, int const *, unsigned long const *)
+                    0.06%  9.3883ms      1000  9.3880us  8.2240us  16.512us  do_mutation(unsigned int, cuIndividual*, double, RandService*)
+                    0.02%  2.5412ms      1001  2.5380us  2.3670us  12.608us  swap_parent_child_genome(unsigned int, cuIndividual*, unsigned long*)
+                    0.02%  2.5118ms         1  2.5118ms  2.5118ms  2.5118ms  init_device_population(int, unsigned int, unsigned int, int, cuIndividual*, unsigned long*, unsigned char*, unsigned long*, unsigned int*, unsigned long*, unsigned int*, cuRNA*)
+                    0.01%  1.6073ms      1028  1.5630us  1.2800us  9.5040us  [CUDA memcpy DtoH]
+                    0.01%  983.56us         1  983.56us  983.56us  983.56us  clean_population_metadata(unsigned int, cuIndividual*)
+                    0.00%  396.70us      1027     386ns     288ns  2.4320us  [CUDA memcpy HtoD]
+      API calls:   99.00%  14.7695s     13013  1.1350ms  5.2760us  48.960ms  cudaDeviceSynchronize
+                    0.44%  65.061ms         1  65.061ms  65.061ms  65.061ms  cudaDeviceSetLimit
+                    0.27%  39.591ms     13014  3.0420us  2.1670us  6.7657ms  cudaLaunchKernel
+                    0.13%  18.682ms         1  18.682ms  18.682ms  18.682ms  cudaDeviceReset
+                    0.12%  18.269ms      2055  8.8900us  4.0870us  996.16us  cudaMemcpy
+                    0.03%  4.9751ms        13  382.70us  1.9580us  3.2105ms  cudaFree
+                    0.01%  1.5044ms     13013     115ns      81ns  298.24us  cudaGetLastError
+                    0.00%  674.46us        13  51.881us  1.7180us  160.61us  cudaMalloc
+                    0.00%  192.25us       114  1.6860us     169ns  79.173us  cuDeviceGetAttribute
+                    0.00%  16.932us         1  16.932us  16.932us  16.932us  cuDeviceGetName
+                    0.00%  10.792us         1  10.792us  10.792us  10.792us  cuDeviceGetPCIBusId
+                    0.00%  2.0680us         3     689ns     295ns  1.4280us  cuDeviceGetCount
+                    0.00%     934ns         2     467ns     196ns     738ns  cuDeviceGet
+                    0.00%     464ns         1     464ns     464ns     464ns  cuModuleGetLoadingMode
+                    0.00%     444ns         1     444ns     444ns     444ns  cuDeviceTotalMem
+                    0.00%     296ns         1     296ns     296ns     296ns  cuDeviceGetUuid
+```
+
+This is the case since `sparse_meta` only uses 3 threads instead of all of the
+available ones. Our plan was to parallelize sparse_meta by combining most of its
+work with `search_patterns`. The problem here was that the order of the
+resulting lists `terminator_idxs` and `prot_start_idxs` would be different (i.e.
+non-deterministic) which changed the end-result. Additionally we couldn't gain
+any runtime through our approach. Our implementation can be found on the
+[tree/further](further) branch. We believe that with more time one could bring
+those two functions together and increase the GPU performance even further.
 
