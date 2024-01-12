@@ -233,7 +233,7 @@ As a next step we parallelized `clean_population_metadata` with a very simple
 patch to use a thread per individual instead of just one thread doing
 everything:
 
-```
+```patch
 diff --git a/project/cuda/cuExpManager.cu b/project/cuda/cuExpManager.cu
 index 110ea097d75f..95f4fcffb0e5 100644
 --- a/project/cuda/cuExpManager.cu
